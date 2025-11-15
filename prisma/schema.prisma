@@ -1,0 +1,818 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * ===================== Enums =====================
+ */
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum Storage {
+  LOCAL
+  S3
+}
+
+enum FileKind {
+  IMAGE
+  DOCUMENT
+}
+
+enum StaticPageType {
+  HOME
+  ABOUT
+  CONTACTS
+  ORG_INFO
+  PERSONAL_DATA_POLICY
+  PRIVACY_POLICY
+}
+
+enum TrustItemKind {
+  LICENSE
+  CERTIFICATE
+  AWARD
+  ATTESTATION
+}
+
+enum DayGroup {
+  WEEKDAYS
+  SATURDAY
+  SUNDAY
+}
+
+enum ImagePurpose {
+  HERO
+  GALLERY
+  INLINE
+}
+
+enum LeadSourceType {
+  HOME
+  CONTACTS
+  SERVICE
+  DEVICE
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  IN_PROGRESS
+  DONE
+}
+
+enum PhoneType {
+  MAIN
+  RECEPTION
+  OTHER
+}
+
+enum OrgDocType {
+  PRIVACY_POLICY
+  USER_AGREEMENT
+  BOOKING_RULES
+  PDN_CONSENT_SAMPLE
+  MED_CONSENT_SAMPLE
+  AD_DISCLOSURE
+  OTHER
+}
+
+enum DeviceCertType {
+  FDA
+  CE
+  ROSZDRAV
+  OTHER
+}
+
+enum DeviceDocType {
+  CERTIFICATE
+  MANUAL
+  REG_CERT
+  OTHER
+}
+
+enum Rarity {
+  COMMON
+  UNCOMMON
+  RARE
+}
+
+enum ServicePriceType {
+  BASE
+  EXTRA
+  PACKAGE
+}
+
+/**
+ * ===================== Auth =====================
+ */
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EDITOR)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  ip        String?
+  userAgent String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/**
+ * ===================== Files =====================
+ */
+
+model File {
+  id           Int      @id @default(autoincrement())
+  storage      Storage  @default(LOCAL)
+  kind         FileKind
+  originalName String
+  path         String   @unique
+  mime         String
+  sizeBytes    Int
+  width        Int?
+  height       Int?
+  sha256       String?  @unique
+  createdAt    DateTime @default(now())
+
+  // ---------- back-relations (именованные) ----------
+  orgLicenses           OrgLicense[]       @relation("OrgLicenseFile")
+  orgCertificates       OrgCertificate[]   @relation("OrgCertificateFile")
+  homeGalleryImages     HomeGalleryImage[] @relation("HomeGalleryImageFile")
+  aboutTrustItemImages  AboutTrustItem[]   @relation("AboutTrustItemImage")
+  aboutTrustItemFiles   AboutTrustItem[]   @relation("AboutTrustItemFile")
+  seoStaticPageOg       SeoStaticPage[]    @relation("SeoStaticPageOgImage")
+  seoCategoryOg         SeoCategory[]      @relation("SeoCategoryOgImage")
+  seoServiceOg          SeoService[]       @relation("SeoServiceOgImage")
+  seoDeviceOg           SeoDevice[]        @relation("SeoDeviceOgImage")
+  serviceImages         ServiceImage[]     @relation("ServiceImageFile")
+  categoryImages        CategoryImage[]    @relation("CategoryImageFile")
+  deviceCertBadgeImages DeviceCertBadge[]  @relation("DeviceCertBadgeImage")
+  deviceCertBadgeFiles  DeviceCertBadge[]  @relation("DeviceCertBadgeFile")
+  deviceAttachments     DeviceAttachment[] @relation("DeviceAttachmentImage")
+  deviceDocuments       DeviceDocument[]   @relation("DeviceDocumentFile")
+  deviceImages          DeviceImage[]      @relation("DeviceImageFile")
+}
+
+/**
+ * ===================== Organization (ORG_INFO) =====================
+ */
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  ogrn      String
+  inn       String
+  kpp       String
+  address   String
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  phones       OrganizationPhone[]
+  licenses     OrgLicense[]
+  documents    OrgDocument[]
+  certificates OrgCertificate[]
+}
+
+model OrganizationPhone {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           PhoneType    @default(MAIN)
+  number         String
+  isPrimary      Boolean      @default(false)
+}
+
+model OrgLicense {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  licenseNumber  String
+  issuedAt       DateTime     @db.Date
+  issuedBy       String
+  fileId         Int
+  file           File         @relation("OrgLicenseFile", fields: [fileId], references: [id], onDelete: Restrict)
+}
+
+model OrgDocument {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  docType        OrgDocType
+  title          String
+  htmlBody       String
+  publishedAt    DateTime?    @db.Date
+}
+
+model OrgCertificate {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  issuedBy       String?
+  issuedAt       DateTime?    @db.Date
+  fileId         Int
+  file           File         @relation("OrgCertificateFile", fields: [fileId], references: [id], onDelete: Restrict)
+}
+
+/**
+ * ===================== Static Pages =====================
+ */
+
+model StaticPage {
+  id          Int            @id @default(autoincrement())
+  type        StaticPageType @unique
+  slug        String         @unique
+  updatedAt   DateTime       @updatedAt
+
+  home     HomePage?
+  about    AboutPage?
+  contacts ContactsPage?
+  policy   PolicyPage?
+
+  seo SeoStaticPage?
+}
+
+model HomePage {
+  id   Int        @id
+  page StaticPage @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  heroTitle    String
+  heroSubtitle String
+  heroCtaText  String
+  heroCtaUrl   String
+
+  subheroTitle    String
+  subheroSubtitle String
+
+  interiorText String
+
+  directions HomeDirection[]
+  gallery    HomeGalleryImage[]
+}
+
+model HomeDirection {
+  id         Int      @id @default(autoincrement())
+  homePageId Int
+  homePage   HomePage @relation(fields: [homePageId], references: [id], onDelete: Cascade)
+
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  order Int
+
+  @@index([homePageId, order])
+}
+
+model HomeGalleryImage {
+  id         Int      @id @default(autoincrement())
+  homePageId Int
+  homePage   HomePage @relation(fields: [homePageId], references: [id], onDelete: Cascade)
+
+  fileId Int
+  file   File @relation("HomeGalleryImageFile", fields: [fileId], references: [id], onDelete: Restrict)
+
+  purpose ImagePurpose // HERO или GALLERY (интерьер)
+  order   Int
+  alt     String?
+  caption String?
+
+  @@index([homePageId, order])
+}
+
+model AboutPage {
+  id   Int        @id
+  page StaticPage @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  heroTitle        String
+  heroDescription  String
+  howWeAchieveText String
+
+  trustItems AboutTrustItem[]
+  facts      AboutFact[]
+  heroCta    AboutHeroCta?
+}
+
+model AboutTrustItem {
+  id          Int       @id @default(autoincrement())
+  aboutPageId Int
+  aboutPage   AboutPage @relation(fields: [aboutPageId], references: [id], onDelete: Cascade)
+
+  kind     TrustItemKind
+  title    String
+  number   String?
+  issuedAt DateTime?     @db.Date
+  issuedBy String?
+
+  imageId Int?
+  image   File? @relation("AboutTrustItemImage", fields: [imageId], references: [id], onDelete: SetNull)
+
+  fileId Int?
+  file   File? @relation("AboutTrustItemFile", fields: [fileId], references: [id], onDelete: SetNull)
+}
+
+model AboutFact {
+  id          Int       @id @default(autoincrement())
+  aboutPageId Int
+  aboutPage   AboutPage @relation(fields: [aboutPageId], references: [id], onDelete: Cascade)
+
+  title String
+  text  String
+  order Int
+}
+
+model AboutHeroCta {
+  id          Int       @id @default(autoincrement())
+  aboutPageId Int       @unique
+  aboutPage   AboutPage @relation(fields: [aboutPageId], references: [id], onDelete: Cascade)
+
+  title    String
+  subtitle String?
+}
+
+model ContactsPage {
+  id   Int        @id
+  page StaticPage @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  phoneMain    String
+  email        String?
+  telegramUrl  String?
+  whatsappUrl  String?
+  addressText  String
+  yandexMapUrl String
+
+  workingHours  ContactsWorkingHours[]
+  metroStations ContactsMetroStation[]
+}
+
+model ContactsWorkingHours {
+  id             Int          @id @default(autoincrement())
+  contactsPageId Int
+  contactsPage   ContactsPage @relation(fields: [contactsPageId], references: [id], onDelete: Cascade)
+
+  dayGroup     DayGroup
+  openMinutes  Int?
+  closeMinutes Int?
+  isClosed     Boolean  @default(false)
+
+  @@unique([contactsPageId, dayGroup])
+}
+
+model ContactsMetroStation {
+  id             Int          @id @default(autoincrement())
+  contactsPageId Int
+  contactsPage   ContactsPage @relation(fields: [contactsPageId], references: [id], onDelete: Cascade)
+
+  name           String
+  distanceMeters Int?
+  line           String?
+}
+
+model PolicyPage {
+  id   Int        @id
+  page StaticPage @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  title String
+  body  String
+}
+
+/**
+ * ===================== SEO (1:1 на сущность) =====================
+ */
+
+model SeoStaticPage {
+  id     Int        @id @default(autoincrement())
+  pageId Int        @unique
+  page   StaticPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  robotsIndex     Boolean @default(true)
+  robotsFollow    Boolean @default(true)
+  ogTitle         String?
+  ogDescription   String?
+  ogImageId       Int?
+  ogImage         File?   @relation("SeoStaticPageOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+
+  updatedAt DateTime @updatedAt
+}
+
+model SeoCategory {
+  id         Int             @id @default(autoincrement())
+  categoryId Int             @unique
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  robotsIndex     Boolean @default(true)
+  robotsFollow    Boolean @default(true)
+  ogTitle         String?
+  ogDescription   String?
+  ogImageId       Int?
+  ogImage         File?   @relation("SeoCategoryOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+
+  updatedAt DateTime @updatedAt
+}
+
+model SeoService {
+  id        Int     @id @default(autoincrement())
+  serviceId Int     @unique
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  robotsIndex     Boolean @default(true)
+  robotsFollow    Boolean @default(true)
+  ogTitle         String?
+  ogDescription   String?
+  ogImageId       Int?
+  ogImage         File?   @relation("SeoServiceOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+
+  updatedAt DateTime @updatedAt
+}
+
+model SeoDevice {
+  id       Int    @id @default(autoincrement())
+  deviceId Int    @unique
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  metaTitle       String?
+  metaDescription String?
+  canonicalUrl    String?
+  robotsIndex     Boolean @default(true)
+  robotsFollow    Boolean @default(true)
+  ogTitle         String?
+  ogDescription   String?
+  ogImageId       Int?
+  ogImage         File?   @relation("SeoDeviceOgImage", fields: [ogImageId], references: [id], onDelete: SetNull)
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * ===================== Categories & Services =====================
+ */
+
+model ServiceCategory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  services Service[]
+  images   CategoryImage[]
+  seo      SeoCategory?
+}
+
+model CategoryImage {
+  id         Int             @id @default(autoincrement())
+  categoryId Int
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  fileId Int
+  file   File @relation("CategoryImageFile", fields: [fileId], references: [id], onDelete: Restrict)
+
+  purpose ImagePurpose
+  order   Int          @default(0)
+  alt     String?
+  caption String?
+
+  @@index([categoryId, order])
+}
+
+model Service {
+  id         Int             @id @default(autoincrement())
+  categoryId Int
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  name String
+  slug String @unique
+
+  shortOffer      String?
+  priceFrom       Decimal? @db.Decimal(10, 2)
+  durationMinutes Int?
+  benefit1        String?
+  benefit2        String?
+  ctaText         String?
+  ctaUrl          String?
+
+  sortOrder   Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  details           ServiceDetails?
+  pricesExtended    ServicePriceExtended[]
+  indications       ServiceIndication[]
+  contraindications ServiceContraindication[]
+  preparationSteps  ServicePreparationStep[]
+  rehabSteps        ServiceRehabStep[]
+  faq               ServiceFaq[]
+  legalDisclaimers  ServiceLegalDisclaimer[]
+  devices           ServiceDevice[]
+  images            ServiceImage[]
+  seo               SeoService?
+
+  homeDirections HomeDirection[] // back from HomeDirection
+  leads          Lead[]          @relation("LeadService")
+
+  @@index([categoryId])
+}
+
+model ServicePriceExtended {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  title           String
+  price           Decimal          @db.Decimal(10, 2)
+  durationMinutes Int?
+  type            ServicePriceType @default(BASE)
+  sessionsCount   Int?
+  order           Int              @default(0)
+  isActive        Boolean          @default(true)
+
+  @@index([serviceId, order])
+}
+
+model ServiceDetails {
+  serviceId Int     @id
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  whoIsFor       String
+  effect         String
+  principle      String
+  resultsTiming  String
+  courseSessions Int?
+}
+
+model ServiceIndication {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  text      String
+}
+
+model ServiceContraindication {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  text      String
+}
+
+model ServicePreparationStep {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  text      String
+  order     Int     @default(0)
+}
+
+model ServiceRehabStep {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  text      String
+  order     Int     @default(0)
+}
+
+model ServiceFaq {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  order     Int     @default(0)
+}
+
+model ServiceLegalDisclaimer {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  text      String
+}
+
+model ServiceDevice {
+  serviceId Int
+  deviceId  Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  device    Device  @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+
+  @@id([serviceId, deviceId])
+}
+
+model ServiceImage {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  fileId Int
+  file   File @relation("ServiceImageFile", fields: [fileId], references: [id], onDelete: Restrict)
+
+  purpose ImagePurpose
+  order   Int          @default(0)
+  alt     String?
+  caption String?
+
+  @@index([serviceId, order])
+}
+
+/**
+ * ===================== Devices =====================
+ */
+
+model Device {
+  id          Int      @id @default(autoincrement())
+  brand       String
+  model       String
+  slug        String   @unique
+  positioning String?
+  principle   String?
+  safetyNotes String?
+  updatedAt   DateTime @updatedAt
+
+  certBadges        DeviceCertBadge[]
+  parameters        DeviceParameter[]
+  attachments       DeviceAttachment[]
+  modes             DeviceMode[]
+  indications       DeviceIndication[]
+  contraindications DeviceContraindication[]
+  sideEffects       DeviceSideEffect[]
+  documents         DeviceDocument[]
+  faq               DeviceFaq[]
+  images            DeviceImage[]
+  services          ServiceDevice[]
+  seo               SeoDevice?
+
+  leads Lead[] @relation("LeadDevice")
+}
+
+model DeviceCertBadge {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  type    DeviceCertType
+  label   String
+  imageId Int?
+  image   File?          @relation("DeviceCertBadgeImage", fields: [imageId], references: [id], onDelete: SetNull)
+
+  fileId Int?
+  file   File? @relation("DeviceCertBadgeFile", fields: [fileId], references: [id], onDelete: SetNull)
+}
+
+model DeviceParameter {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  name      String
+  unit      String?
+  valueText String
+  minValue  Decimal? @db.Decimal(10, 3)
+  maxValue  Decimal? @db.Decimal(10, 3)
+}
+
+model DeviceAttachment {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  imageId     Int?
+  image       File?   @relation("DeviceAttachmentImage", fields: [imageId], references: [id], onDelete: SetNull)
+}
+
+model DeviceMode {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+}
+
+model DeviceIndication {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  text     String
+}
+
+model DeviceContraindication {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  text     String
+}
+
+model DeviceSideEffect {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  text     String
+  rarity   Rarity
+}
+
+model DeviceDocument {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  docType  DeviceDocType
+  title    String
+  issuedBy String?
+  issuedAt DateTime?     @db.Date
+
+  fileId Int
+  file   File @relation("DeviceDocumentFile", fields: [fileId], references: [id], onDelete: Restrict)
+}
+
+model DeviceFaq {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  question String
+  answer   String
+  order    Int    @default(0)
+}
+
+model DeviceImage {
+  id       Int    @id @default(autoincrement())
+  deviceId Int
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  fileId Int
+  file   File @relation("DeviceImageFile", fields: [fileId], references: [id], onDelete: Restrict)
+
+  purpose ImagePurpose
+  order   Int          @default(0)
+  alt     String?
+  caption String?
+
+  @@index([deviceId, order])
+}
+
+/**
+ * ===================== Leads =====================
+ */
+
+model Lead {
+  id         Int            @id @default(autoincrement())
+  sourceType LeadSourceType
+
+  serviceId Int?
+  service   Service? @relation("LeadService", fields: [serviceId], references: [id], onDelete: SetNull)
+
+  deviceId Int?
+  device   Device? @relation("LeadDevice", fields: [deviceId], references: [id], onDelete: SetNull)
+
+  name    String
+  phone   String
+  message String?
+
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+
+  referer    String?
+  ipAddress  String
+  pdnConsent Boolean @default(false)
+
+  status    LeadStatus @default(NEW)
+  createdAt DateTime   @default(now())
+
+  @@index([serviceId])
+  @@index([deviceId])
+  @@index([createdAt])
+}
