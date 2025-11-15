@@ -125,7 +125,6 @@ async function seedStaticPages(files: {
       create: {
         type,
         slug: slugs[type],
-        isPublished: true,
       },
     });
   }
@@ -350,13 +349,11 @@ async function seedCatalog(files: { ogId: number }) {
     update: {
       name: 'Массаж',
       description: 'Классические и авторские массажные техники.',
-      isPublished: true,
     },
     create: {
       name: 'Массаж',
       slug: 'massazh',
       description: 'Классические и авторские массажные техники.',
-      isPublished: true,
     },
   });
 
@@ -365,13 +362,11 @@ async function seedCatalog(files: { ogId: number }) {
     update: {
       name: 'SPA',
       description: 'SPA-ритуалы и уходовые программы.',
-      isPublished: true,
     },
     create: {
       name: 'SPA',
       slug: 'spa',
       description: 'SPA-ритуалы и уходовые программы.',
-      isPublished: true,
     },
   });
 
@@ -416,7 +411,6 @@ async function seedCatalog(files: { ogId: number }) {
       principle: 'Высокочастотная энергия, стимулирующая выработку коллагена.',
       safetyNotes:
         'Сертифицированное оборудование, минимальный период реабилитации.',
-      isPublished: true,
     },
     create: {
       brand: 'BrandX',
@@ -426,7 +420,6 @@ async function seedCatalog(files: { ogId: number }) {
       principle: 'Высокочастотная энергия, стимулирующая выработку коллагена.',
       safetyNotes:
         'Сертифицированное оборудование, минимальный период реабилитации.',
-      isPublished: true,
     },
   });
 
@@ -508,7 +501,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Снятие мышечных зажимов.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
     create: {
       name: 'Тайский массаж',
@@ -521,7 +513,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Снятие мышечных зажимов.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
   });
 
@@ -673,7 +664,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Улучшение состояния кожи и общего самочувствия.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
     create: {
       name: 'SPA-ритуал Relax',
@@ -686,7 +676,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Улучшение состояния кожи и общего самочувствия.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
   });
 
@@ -713,7 +702,6 @@ async function seedCatalog(files: { ogId: number }) {
   });
 
   const services = await prisma.service.findMany({
-    where: { isPublished: true },
     orderBy: { id: 'asc' },
     take: 4,
   });
