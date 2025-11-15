@@ -71,15 +71,23 @@
 - **Услуги:** транзакционно создают/обновляют HERO, галерею, привязки к устройствам и расширенные цены, сохраняя порядок элементов. Любой переданный массив пересобирается с нуля, поэтому фронт должен отправлять полный список. Ответ содержит вложенные `images` (с `file`), `devices`, `pricesExtended` и `seo` для дальнейшего отображения/редактирования.【F:src/services/admin-catalog.service.ts†L263-L353】【F:src/services/admin-catalog.service.ts†L357-L459】【F:src/services/admin-catalog.service.ts†L343-L350】
 - **Аппараты:** работают по тем же правилам; HERO всегда одиночный, галерея пересоздаётся при передаче массива. Ответ содержит `images` (каждое с вложенным `file`) и `seo`.【F:src/services/admin-catalog.service.ts†L544-L595】【F:src/services/admin-catalog.service.ts†L597-L676】
 
+### 3.3 Автогенерация slug
+- Slug для категорий, услуг и аппаратов вычисляется на сервере. Фронтенду НЕ нужно отправлять поле `slug` ни при создании, ни при обновлении.
+- Алгоритм: берём человекочитаемое название (`name` для категорий/услуг, `brand + model` для аппаратов), транслитерируем русские символы в латиницу, приводим строку к нижнему регистру и заменяем любые неалфавитно-цифровые символы на дефисы. Это гарантирует валидность URL.
+- Перед сохранением slug проверяется на уникальность в соответствующей таблице. При коллизии сервер добавляет к базе суффикс `-xxxx`, где `xxxx` — случайная комбинация из 4 латинских букв/цифр (например, `injekcii-a9f2`). При необходимости проверка повторяется, пока не будет найдено уникальное значение.
+- В ответах API slug всегда присутствует — UI должен отображать и использовать его для ссылок, но не отправлять обратно. При изменении `name`/`brand`/`model` slug пересчитается автоматически.
+
 ## 4. Каталог
 ### 4.1 Категории услуг
 | Метод | Путь | Обязательные поля | Дополнительные поля |
 | --- | --- | --- | --- |
-| POST | `/admin/catalog/categories` | `name: string`, `slug: string` | `description?: string`, `sortOrder?: number`, `heroImageFileId?: number`, `seo?: SeoBody` |
+| POST | `/admin/catalog/categories` | `name: string` | `description?: string`, `sortOrder?: number`, `heroImageFileId?: number`, `seo?: SeoBody` |
 | PUT | `/admin/catalog/categories/:id` | — (все поля опциональны) | те же, что и в POST |
 | DELETE | `/admin/catalog/categories/:id` | `id` из URL | — |
 
 **SeoBody** включает `metaTitle`, `metaDescription`, `canonicalUrl`, `robotsIndex`, `robotsFollow`, `ogTitle`, `ogDescription`, `ogImageId`. Любое поле можно опустить или передать `null`. 【F:src/routes/admin-catalog.routes.ts†L45-L112】
+
+> Slug категории создаётся автоматически из `name` по правилам §3.3 и возвращается в ответе.
 
 **Пример создания:**
 ```http
@@ -89,7 +97,6 @@ Content-Type: application/json
 
 {
   "name": "Инъекции",
-  "slug": "injections",
   "description": "Малоинвазивные процедуры",
   "sortOrder": 20,
   "heroImageFileId": 345,
@@ -115,11 +122,13 @@ Content-Type: application/json
 
 ### 4.2 Услуги
 **Схема запроса (POST /admin/catalog/services):**
-- Базовые поля: `categoryId`, `name`, `slug`, `shortOffer` (обязательные); опциональные `priceFrom`, `durationMinutes`, `benefit1`, `benefit2`, `ctaText`, `ctaUrl`, `sortOrder`.
+- Базовые поля: `categoryId`, `name`, `shortOffer` (обязательные); опциональные `priceFrom`, `durationMinutes`, `benefit1`, `benefit2`, `ctaText`, `ctaUrl`, `sortOrder`. Slug генерируется автоматически из `name`.
 - Медиа/связи: `heroImageFileId?: number`, `galleryImageFileIds?: number[]`, `usedDeviceIds?: number[]`.
 - Расширенные цены: `servicePricesExtended?: { title: string; price: number; durationMinutes?: number; type?: 'BASE'|'EXTRA'|'PACKAGE'; sessionsCount?: number; order?: number; isActive?: boolean; }[]`.
 - `seo?: SeoBody`.
 `PUT /admin/catalog/services/:id` принимает те же поля, но все они опциональны; массивы, если переданы, пересобираются целиком. Удаление HERO — через `"heroImageFileId": null`. Пустой массив `[]` удалит галерею/список устройств/цен.【F:src/routes/admin-catalog.routes.ts†L116-L221】【F:src/services/admin-catalog.service.ts†L263-L459】
+
+> Если при обновлении поменять `name`, slug услуги также пересчитается и вернётся в ответе. Старые slug не нужно хранить на фронте.
 
 **Пример создания:**
 ```http
@@ -130,7 +139,6 @@ Content-Type: application/json
 {
   "categoryId": 12,
   "name": "SMAS-лифтинг",
-  "slug": "smas-lifting",
   "shortOffer": "Быстрый лифтинг без реабилитации",
   "priceFrom": 19000,
   "durationMinutes": 90,
@@ -227,9 +235,11 @@ Content-Type: application/json
 
 ### 4.3 Аппараты
 **POST /admin/catalog/devices**
-- Обязательные поля: `brand`, `model`, `slug`, `positioning`, `principle`.
+- Обязательные поля: `brand`, `model`, `positioning`, `principle`. Slug генерируется автоматически из `brand + model`.
 - Опциональные: `safetyNotes`, `heroImageFileId`, `galleryImageFileIds`, `seo` (та же структура).
 `PUT /admin/catalog/devices/:id` принимает те же поля; массивы/hero ведут себя как в услугах. `DELETE` удаляет запись целиком.【F:src/routes/admin-catalog.routes.ts†L224-L305】【F:src/services/admin-catalog.service.ts†L544-L676】
+
+> При изменении `brand` или `model` slug устройства автоматически пересчитывается и возвращается в ответе.
 
 **Пример обновления:**
 ```http

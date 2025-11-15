@@ -26,6 +26,12 @@
 - Устройства содержат сертификаты (`certBadges`), документы (`documents`) и произвольные вложения (`attachments`). Для каждого документа фронтенд получает `{ id, docType, title, file: { id, url, mime, name } }`, где `url` строится из `path`. Аналогично сертификаты и вложения имеют как изображения (для бейджей/превью), так и файлы.
 - Страница сведений об организации (`/pages/org-info`) отдаёт лицензии и сертификаты с прикреплёнными файлами, а также текстовые документы (`htmlBody`). Эти данные нужно отображать в соответствии с типом документа.
 
+### Автогенерация slug
+- Для категорий, услуг и аппаратов slug формируется автоматически из человекочитаемого названия: бэкенд транслитерирует русские символы в латиницу, приводит строку к нижнему регистру и заменяет любые недопустимые символы на `-`.
+- Фронтенду не нужно (и нельзя) передавать slug в запросах создания/обновления. Достаточно указать `name` (для категорий и услуг) либо пару `brand`+`model` (для аппаратов).
+- Перед сохранением slug проверяется на уникальность. Если значение занято, сервер добавляет к базе суффикс из четырёх случайных латинских букв/цифр через дефис (например, `injekcii-3k9d`). Это гарантирует пригодность slug для URL даже при коллизиях.
+- Ответы API по-прежнему содержат slug — фронт использует их для переходов и привязки карточек, но не отправляет обратно.
+
 ## 3. Публичные маршруты
 ### 3.1 Служебные
 | Метод | Путь | Описание/ответ |
@@ -102,7 +108,7 @@
 
 ### 4.1 Каталог
 #### POST /admin/catalog/categories
-- **Тело:** `{ name, slug, description?, sortOrder?, heroImageFileId?, seo? }`.
+- **Тело:** `{ name, description?, sortOrder?, heroImageFileId?, seo? }`. Slug генерируется автоматически из `name`, поэтому поле не передаём.
 - **Ответ:** созданная категория `{ id, name, slug, description, sortOrder, ... }`.
 - Если передан `heroImageFileId`, создаётся HERO-запись.
 
@@ -116,7 +122,7 @@
 
 #### POST /admin/catalog/services
 - **Тело:**
-  - Основные поля: `{ categoryId, name, slug, shortOffer, priceFrom?, durationMinutes?, benefit1?, benefit2?, ctaText?, ctaUrl?, sortOrder? }`.
+  - Основные поля: `{ categoryId, name, shortOffer, priceFrom?, durationMinutes?, benefit1?, benefit2?, ctaText?, ctaUrl?, sortOrder? }`. Slug формируется автоматически по `name`.
   - Связи: `heroImageFileId?`, `galleryImageFileIds?`, `usedDeviceIds?`.
   - Доп. цены: `servicePricesExtended?` — массив `{ title, price, durationMinutes?, type?, sessionsCount?, order?, isActive? }`.
   - SEO: `seo?` (общая структура).
@@ -132,7 +138,7 @@
 - Ответ `204 No Content`.
 
 #### POST /admin/catalog/devices
-- **Тело:** `{ brand, model, slug, positioning, principle, safetyNotes?, heroImageFileId?, galleryImageFileIds?, seo? }`.
+- **Тело:** `{ brand, model, positioning, principle, safetyNotes?, heroImageFileId?, galleryImageFileIds?, seo? }`. Slug генерируется из `brand + model`.
 - **Ответ:** созданный аппарат с `images` (файлы) и `seo`.
 
 #### PUT /admin/catalog/devices/:id

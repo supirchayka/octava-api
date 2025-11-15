@@ -1,6 +1,8 @@
 // src/services/admin-catalog.service.ts
 import type { FastifyInstance } from 'fastify';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { ImagePurpose, ServicePriceType } from '@prisma/client';
+import { randomSlugSuffix, slugify } from '../utils/slug';
 
 /**
  * Базовый SEO-дто для категорий/услуг/аппаратов.
@@ -26,7 +28,6 @@ export type SeoDeviceBody = SeoCommonBody;
 
 export interface CategoryBody {
   name: string;
-  slug: string;
   description?: string | null;
   sortOrder?: number;
   heroImageFileId?: number | null;
@@ -50,7 +51,6 @@ export interface ServicePriceExtendedBody {
 export interface ServiceBody {
   categoryId: number;
   name: string;
-  slug: string;
   shortOffer: string;
   priceFrom?: number | null;
   durationMinutes?: number | null;
@@ -74,7 +74,6 @@ export interface ServiceBody {
 export interface DeviceBody {
   brand: string;
   model: string;
-  slug: string;
   positioning: string;
   principle: string;
   safetyNotes?: string | null;
@@ -83,19 +82,67 @@ export interface DeviceBody {
   seo?: SeoDeviceBody;
 }
 
+type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
+
 /**
  * Сервис админского каталога (категории, услуги, аппараты).
  */
 export class AdminCatalogService {
   constructor(private app: FastifyInstance) {}
 
+  private async slugExists(
+    db: PrismaClientLike,
+    entity: 'category' | 'service' | 'device',
+    slug: string,
+    excludeId?: number,
+  ) {
+    const where: any = { slug };
+    if (excludeId !== undefined) {
+      where.id = { not: excludeId };
+    }
+
+    if (entity === 'category') {
+      const found = await db.serviceCategory.findFirst({ where });
+      return Boolean(found);
+    }
+
+    if (entity === 'service') {
+      const found = await db.service.findFirst({ where });
+      return Boolean(found);
+    }
+
+    const found = await db.device.findFirst({ where });
+    return Boolean(found);
+  }
+
+  private async generateEntitySlug(
+    db: PrismaClientLike,
+    entity: 'category' | 'service' | 'device',
+    source: string,
+    excludeId?: number,
+  ) {
+    const base = slugify(source.trim());
+    let candidate = base;
+
+    while (await this.slugExists(db, entity, candidate, excludeId)) {
+      candidate = `${base}-${randomSlugSuffix()}`;
+    }
+
+    return candidate;
+  }
+
   /* ===================== CATEGORY ===================== */
 
   async createCategory(body: CategoryBody) {
+    const slug = await this.generateEntitySlug(
+      this.app.prisma,
+      'category',
+      body.name,
+    );
     const category = await this.app.prisma.serviceCategory.create({
       data: {
         name: body.name,
-        slug: body.slug,
+        slug,
         description: body.description ?? null,
         sortOrder: body.sortOrder ?? 0,
       },
@@ -128,11 +175,21 @@ export class AdminCatalogService {
       throw this.app.httpErrors.notFound('Категория не найдена');
     }
 
+    let slugToUpdate: string | undefined;
+    if (body.name !== undefined) {
+      slugToUpdate = await this.generateEntitySlug(
+        this.app.prisma,
+        'category',
+        body.name,
+        id,
+      );
+    }
+
     const category = await this.app.prisma.serviceCategory.update({
       where: { id },
       data: {
         ...(body.name !== undefined && { name: body.name }),
-        ...(body.slug !== undefined && { slug: body.slug }),
+        ...(slugToUpdate && { slug: slugToUpdate }),
         ...(body.description !== undefined && {
           description: body.description ?? null,
         }),
@@ -262,11 +319,12 @@ export class AdminCatalogService {
 
   async createService(body: ServiceBody) {
     return this.app.prisma.$transaction(async (tx) => {
+      const slug = await this.generateEntitySlug(tx, 'service', body.name);
       const service = await tx.service.create({
         data: {
           categoryId: body.categoryId,
           name: body.name,
-          slug: body.slug,
+          slug,
           shortOffer: body.shortOffer,
           priceFrom: body.priceFrom ?? null,
           durationMinutes: body.durationMinutes ?? null,
@@ -361,12 +419,17 @@ export class AdminCatalogService {
         throw this.app.httpErrors.notFound('Услуга не найдена');
       }
 
+      let slugToUpdate: string | undefined;
+      if (body.name !== undefined) {
+        slugToUpdate = await this.generateEntitySlug(tx, 'service', body.name, id);
+      }
+
       await tx.service.update({
         where: { id },
         data: {
           ...(body.categoryId !== undefined && { categoryId: body.categoryId }),
           ...(body.name !== undefined && { name: body.name }),
-          ...(body.slug !== undefined && { slug: body.slug }),
+          ...(slugToUpdate && { slug: slugToUpdate }),
           ...(body.shortOffer !== undefined && {
             shortOffer: body.shortOffer,
           }),
@@ -543,11 +606,16 @@ export class AdminCatalogService {
 
   async createDevice(body: DeviceBody) {
     return this.app.prisma.$transaction(async (tx) => {
+      const slug = await this.generateEntitySlug(
+        tx,
+        'device',
+        `${body.brand} ${body.model}`,
+      );
       const device = await tx.device.create({
         data: {
           brand: body.brand,
           model: body.model,
-          slug: body.slug,
+          slug,
           positioning: body.positioning,
           principle: body.principle,
           safetyNotes: body.safetyNotes ?? null,
@@ -601,12 +669,24 @@ export class AdminCatalogService {
         throw this.app.httpErrors.notFound('Аппарат не найден');
       }
 
+      let slugToUpdate: string | undefined;
+      if (body.brand !== undefined || body.model !== undefined) {
+        const brand = body.brand ?? existing.brand;
+        const model = body.model ?? existing.model;
+        slugToUpdate = await this.generateEntitySlug(
+          tx,
+          'device',
+          `${brand} ${model}`,
+          id,
+        );
+      }
+
       await tx.device.update({
         where: { id },
         data: {
           ...(body.brand !== undefined && { brand: body.brand }),
           ...(body.model !== undefined && { model: body.model }),
-          ...(body.slug !== undefined && { slug: body.slug }),
+          ...(slugToUpdate && { slug: slugToUpdate }),
           ...(body.positioning !== undefined && {
             positioning: body.positioning,
           }),
