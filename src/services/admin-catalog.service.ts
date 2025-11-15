@@ -62,7 +62,7 @@ export interface ServiceBody {
 
   // Привязки
   heroImageFileId?: number | null; // файл для HERO
-  galleryImageFileIds?: number[];  // файлы для галереи
+  galleryImageFileIds?: number[] | null; // файлы для галереи
   usedDeviceIds?: number[];        // какие аппараты используются
 
   servicePricesExtended?: ServicePriceExtendedBody[];
@@ -78,6 +78,8 @@ export interface DeviceBody {
   positioning: string;
   principle: string;
   safetyNotes?: string | null;
+  heroImageFileId?: number | null;
+  galleryImageFileIds?: number[] | null;
   seo?: SeoDeviceBody;
 }
 
@@ -277,7 +279,7 @@ export class AdminCatalogService {
       });
 
       // HERO изображение
-      if (body.heroImageFileId) {
+      if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
         await tx.serviceImage.create({
           data: {
             serviceId: service.id,
@@ -551,18 +553,52 @@ export class AdminCatalogService {
       },
     });
 
-    if (body.seo) {
-      await this.upsertDeviceSeo(device.id, body.seo);
-    }
+      if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
+        await tx.deviceImage.create({
+          data: {
+            deviceId: device.id,
+            fileId: body.heroImageFileId,
+            purpose: ImagePurpose.HERO,
+            order: 0,
+          },
+        });
+      }
 
-    return device;
+      if (body.galleryImageFileIds?.length) {
+        for (let i = 0; i < body.galleryImageFileIds.length; i++) {
+          await tx.deviceImage.create({
+            data: {
+              deviceId: device.id,
+              fileId: body.galleryImageFileIds[i],
+              purpose: ImagePurpose.GALLERY,
+              order: i,
+            },
+          });
+        }
+      }
+
+      if (body.seo) {
+        await this.upsertDeviceSeo(device.id, body.seo);
+      }
+
+      const full = await tx.device.findUnique({
+        where: { id: device.id },
+        include: {
+          images: { include: { file: true } },
+          seo: true,
+        },
+      });
+
+      return full!;
+    });
   }
 
   async updateDevice(id: number, body: DeviceBody) {
-    const existing = await this.app.prisma.device.findUnique({ where: { id } });
-    if (!existing) {
-      throw this.app.httpErrors.notFound('Аппарат не найден');
-    }
+    return this.app.prisma.$transaction(async (tx) => {
+      const existing = await tx.device.findUnique({ where: { id } });
+      if (!existing) {
+        throw this.app.httpErrors.notFound('Аппарат не найден');
+      }
 
     const device = await this.app.prisma.device.update({
       where: { id },
@@ -582,11 +618,56 @@ export class AdminCatalogService {
       },
     });
 
-    if (body.seo) {
-      await this.upsertDeviceSeo(device.id, body.seo);
-    }
+      if (body.heroImageFileId !== undefined) {
+        await tx.deviceImage.deleteMany({
+          where: { deviceId: id, purpose: ImagePurpose.HERO },
+        });
 
-    return device;
+        if (body.heroImageFileId !== null) {
+          await tx.deviceImage.create({
+            data: {
+              deviceId: id,
+              fileId: body.heroImageFileId,
+              purpose: ImagePurpose.HERO,
+              order: 0,
+            },
+          });
+        }
+      }
+
+      if (body.galleryImageFileIds !== undefined) {
+        await tx.deviceImage.deleteMany({
+          where: { deviceId: id, purpose: ImagePurpose.GALLERY },
+        });
+
+        if (body.galleryImageFileIds?.length) {
+          for (let i = 0; i < body.galleryImageFileIds.length; i++) {
+            await tx.deviceImage.create({
+              data: {
+                deviceId: id,
+                fileId: body.galleryImageFileIds[i],
+                purpose: ImagePurpose.GALLERY,
+                order: i,
+              },
+            });
+          }
+        }
+      }
+
+      if (body.seo) {
+        await this.upsertDeviceSeo(id, body.seo);
+      }
+
+      const full = await tx.device.findUnique({
+        where: { id },
+        include: {
+          images: { include: { file: true } },
+          seo: true,
+        },
+      });
+
+      return full!;
+    });
   }
 
   async deleteDevice(id: number) {
