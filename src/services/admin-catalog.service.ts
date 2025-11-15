@@ -28,8 +28,8 @@ export interface CategoryBody {
   name: string;
   slug: string;
   description?: string | null;
-  isPublished?: boolean;
   sortOrder?: number;
+  heroImageFileId?: number | null;
   seo?: SeoCategoryBody;
 }
 
@@ -58,12 +58,11 @@ export interface ServiceBody {
   benefit2?: string | null;
   ctaText?: string | null;
   ctaUrl?: string | null;
-  isPublished?: boolean;
   sortOrder?: number;
 
   // Привязки
   heroImageFileId?: number | null; // файл для HERO
-  galleryImageFileIds?: number[];  // файлы для галереи
+  galleryImageFileIds?: number[] | null; // файлы для галереи
   usedDeviceIds?: number[];        // какие аппараты используются
 
   servicePricesExtended?: ServicePriceExtendedBody[];
@@ -79,7 +78,8 @@ export interface DeviceBody {
   positioning: string;
   principle: string;
   safetyNotes?: string | null;
-  isPublished?: boolean;
+  heroImageFileId?: number | null;
+  galleryImageFileIds?: number[] | null;
   seo?: SeoDeviceBody;
 }
 
@@ -97,10 +97,20 @@ export class AdminCatalogService {
         name: body.name,
         slug: body.slug,
         description: body.description ?? null,
-        isPublished: body.isPublished ?? false,
         sortOrder: body.sortOrder ?? 0,
       },
     });
+
+    if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
+      await this.app.prisma.categoryImage.create({
+        data: {
+          categoryId: category.id,
+          fileId: body.heroImageFileId,
+          purpose: ImagePurpose.HERO,
+          order: 0,
+        },
+      });
+    }
 
     if (body.seo) {
       await this.upsertCategorySeo(category.id, body.seo);
@@ -126,15 +136,29 @@ export class AdminCatalogService {
         ...(body.description !== undefined && {
           description: body.description ?? null,
         }),
-        ...(body.isPublished !== undefined && {
-          isPublished: body.isPublished,
-        }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
       },
     });
 
     if (body.seo) {
       await this.upsertCategorySeo(category.id, body.seo);
+    }
+
+    if (body.heroImageFileId !== undefined) {
+      await this.app.prisma.categoryImage.deleteMany({
+        where: { categoryId: id, purpose: ImagePurpose.HERO },
+      });
+
+      if (body.heroImageFileId !== null) {
+        await this.app.prisma.categoryImage.create({
+          data: {
+            categoryId: id,
+            fileId: body.heroImageFileId,
+            purpose: ImagePurpose.HERO,
+            order: 0,
+          },
+        });
+      }
     }
 
     return category;
@@ -250,13 +274,12 @@ export class AdminCatalogService {
           benefit2: body.benefit2 ?? null,
           ctaText: body.ctaText ?? null,
           ctaUrl: body.ctaUrl ?? null,
-          isPublished: body.isPublished ?? false,
           sortOrder: body.sortOrder ?? 0,
         },
       });
 
       // HERO изображение
-      if (body.heroImageFileId) {
+      if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
         await tx.serviceImage.create({
           data: {
             serviceId: service.id,
@@ -364,9 +387,6 @@ export class AdminCatalogService {
           }),
           ...(body.ctaUrl !== undefined && {
             ctaUrl: body.ctaUrl ?? null,
-          }),
-          ...(body.isPublished !== undefined && {
-            isPublished: body.isPublished,
           }),
           ...(body.sortOrder !== undefined && {
             sortOrder: body.sortOrder,
@@ -522,57 +542,133 @@ export class AdminCatalogService {
   }
 
   async createDevice(body: DeviceBody) {
-    const device = await this.app.prisma.device.create({
-      data: {
-        brand: body.brand,
-        model: body.model,
-        slug: body.slug,
-        positioning: body.positioning,
-        principle: body.principle,
-        safetyNotes: body.safetyNotes ?? null,
-        isPublished: body.isPublished ?? false,
-      },
+    return this.app.prisma.$transaction(async (tx) => {
+      const device = await tx.device.create({
+        data: {
+          brand: body.brand,
+          model: body.model,
+          slug: body.slug,
+          positioning: body.positioning,
+          principle: body.principle,
+          safetyNotes: body.safetyNotes ?? null,
+        },
+      });
+
+      if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
+        await tx.deviceImage.create({
+          data: {
+            deviceId: device.id,
+            fileId: body.heroImageFileId,
+            purpose: ImagePurpose.HERO,
+            order: 0,
+          },
+        });
+      }
+
+      if (body.galleryImageFileIds?.length) {
+        for (let i = 0; i < body.galleryImageFileIds.length; i++) {
+          await tx.deviceImage.create({
+            data: {
+              deviceId: device.id,
+              fileId: body.galleryImageFileIds[i],
+              purpose: ImagePurpose.GALLERY,
+              order: i,
+            },
+          });
+        }
+      }
+
+      if (body.seo) {
+        await this.upsertDeviceSeo(device.id, body.seo);
+      }
+
+      const full = await tx.device.findUnique({
+        where: { id: device.id },
+        include: {
+          images: { include: { file: true } },
+          seo: true,
+        },
+      });
+
+      return full!;
     });
-
-    if (body.seo) {
-      await this.upsertDeviceSeo(device.id, body.seo);
-    }
-
-    return device;
   }
 
   async updateDevice(id: number, body: DeviceBody) {
-    const existing = await this.app.prisma.device.findUnique({ where: { id } });
-    if (!existing) {
-      throw this.app.httpErrors.notFound('Аппарат не найден');
-    }
+    return this.app.prisma.$transaction(async (tx) => {
+      const existing = await tx.device.findUnique({ where: { id } });
+      if (!existing) {
+        throw this.app.httpErrors.notFound('Аппарат не найден');
+      }
 
-    const device = await this.app.prisma.device.update({
-      where: { id },
-      data: {
-        ...(body.brand !== undefined && { brand: body.brand }),
-        ...(body.model !== undefined && { model: body.model }),
-        ...(body.slug !== undefined && { slug: body.slug }),
-        ...(body.positioning !== undefined && {
-          positioning: body.positioning,
-        }),
-        ...(body.principle !== undefined && {
-          principle: body.principle,
-        }),
-        ...(body.safetyNotes !== undefined && {
-          safetyNotes: body.safetyNotes ?? null,
-        }),
-        ...(body.isPublished !== undefined && {
-          isPublished: body.isPublished,
-        }),
-      },
+      await tx.device.update({
+        where: { id },
+        data: {
+          ...(body.brand !== undefined && { brand: body.brand }),
+          ...(body.model !== undefined && { model: body.model }),
+          ...(body.slug !== undefined && { slug: body.slug }),
+          ...(body.positioning !== undefined && {
+            positioning: body.positioning,
+          }),
+          ...(body.principle !== undefined && {
+            principle: body.principle,
+          }),
+          ...(body.safetyNotes !== undefined && {
+            safetyNotes: body.safetyNotes ?? null,
+          }),
+        },
+      });
+
+      if (body.heroImageFileId !== undefined) {
+        await tx.deviceImage.deleteMany({
+          where: { deviceId: id, purpose: ImagePurpose.HERO },
+        });
+
+        if (body.heroImageFileId !== null) {
+          await tx.deviceImage.create({
+            data: {
+              deviceId: id,
+              fileId: body.heroImageFileId,
+              purpose: ImagePurpose.HERO,
+              order: 0,
+            },
+          });
+        }
+      }
+
+      if (body.galleryImageFileIds !== undefined) {
+        await tx.deviceImage.deleteMany({
+          where: { deviceId: id, purpose: ImagePurpose.GALLERY },
+        });
+
+        if (body.galleryImageFileIds?.length) {
+          for (let i = 0; i < body.galleryImageFileIds.length; i++) {
+            await tx.deviceImage.create({
+              data: {
+                deviceId: id,
+                fileId: body.galleryImageFileIds[i],
+                purpose: ImagePurpose.GALLERY,
+                order: i,
+              },
+            });
+          }
+        }
+      }
+
+      if (body.seo) {
+        await this.upsertDeviceSeo(id, body.seo);
+      }
+
+      const full = await tx.device.findUnique({
+        where: { id },
+        include: {
+          images: { include: { file: true } },
+          seo: true,
+        },
+      });
+
+      return full!;
     });
-
-    if (body.seo) {
-      await this.upsertDeviceSeo(device.id, body.seo);
-    }
-
-    return device;
   }
 
   async deleteDevice(id: number) {
