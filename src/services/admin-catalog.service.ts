@@ -30,6 +30,7 @@ export interface CategoryBody {
   description?: string | null;
   isPublished?: boolean;
   sortOrder?: number;
+  heroImageFileId?: number | null;
   seo?: SeoCategoryBody;
 }
 
@@ -102,6 +103,17 @@ export class AdminCatalogService {
       },
     });
 
+    if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
+      await this.app.prisma.categoryImage.create({
+        data: {
+          categoryId: category.id,
+          fileId: body.heroImageFileId,
+          purpose: ImagePurpose.HERO,
+          order: 0,
+        },
+      });
+    }
+
     if (body.seo) {
       await this.upsertCategorySeo(category.id, body.seo);
     }
@@ -135,6 +147,23 @@ export class AdminCatalogService {
 
     if (body.seo) {
       await this.upsertCategorySeo(category.id, body.seo);
+    }
+
+    if (body.heroImageFileId !== undefined) {
+      await this.app.prisma.categoryImage.deleteMany({
+        where: { categoryId: id, purpose: ImagePurpose.HERO },
+      });
+
+      if (body.heroImageFileId !== null) {
+        await this.app.prisma.categoryImage.create({
+          data: {
+            categoryId: id,
+            fileId: body.heroImageFileId,
+            purpose: ImagePurpose.HERO,
+            order: 0,
+          },
+        });
+      }
     }
 
     return category;
