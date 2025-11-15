@@ -28,8 +28,8 @@ export interface CategoryBody {
   name: string;
   slug: string;
   description?: string | null;
-  isPublished?: boolean;
   sortOrder?: number;
+  heroImageFileId?: number | null;
   seo?: SeoCategoryBody;
 }
 
@@ -58,7 +58,6 @@ export interface ServiceBody {
   benefit2?: string | null;
   ctaText?: string | null;
   ctaUrl?: string | null;
-  isPublished?: boolean;
   sortOrder?: number;
 
   // Привязки
@@ -79,7 +78,6 @@ export interface DeviceBody {
   positioning: string;
   principle: string;
   safetyNotes?: string | null;
-  isPublished?: boolean;
   seo?: SeoDeviceBody;
 }
 
@@ -97,10 +95,20 @@ export class AdminCatalogService {
         name: body.name,
         slug: body.slug,
         description: body.description ?? null,
-        isPublished: body.isPublished ?? false,
         sortOrder: body.sortOrder ?? 0,
       },
     });
+
+    if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
+      await this.app.prisma.categoryImage.create({
+        data: {
+          categoryId: category.id,
+          fileId: body.heroImageFileId,
+          purpose: ImagePurpose.HERO,
+          order: 0,
+        },
+      });
+    }
 
     if (body.seo) {
       await this.upsertCategorySeo(category.id, body.seo);
@@ -126,15 +134,29 @@ export class AdminCatalogService {
         ...(body.description !== undefined && {
           description: body.description ?? null,
         }),
-        ...(body.isPublished !== undefined && {
-          isPublished: body.isPublished,
-        }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
       },
     });
 
     if (body.seo) {
       await this.upsertCategorySeo(category.id, body.seo);
+    }
+
+    if (body.heroImageFileId !== undefined) {
+      await this.app.prisma.categoryImage.deleteMany({
+        where: { categoryId: id, purpose: ImagePurpose.HERO },
+      });
+
+      if (body.heroImageFileId !== null) {
+        await this.app.prisma.categoryImage.create({
+          data: {
+            categoryId: id,
+            fileId: body.heroImageFileId,
+            purpose: ImagePurpose.HERO,
+            order: 0,
+          },
+        });
+      }
     }
 
     return category;
@@ -250,7 +272,6 @@ export class AdminCatalogService {
           benefit2: body.benefit2 ?? null,
           ctaText: body.ctaText ?? null,
           ctaUrl: body.ctaUrl ?? null,
-          isPublished: body.isPublished ?? false,
           sortOrder: body.sortOrder ?? 0,
         },
       });
@@ -364,9 +385,6 @@ export class AdminCatalogService {
           }),
           ...(body.ctaUrl !== undefined && {
             ctaUrl: body.ctaUrl ?? null,
-          }),
-          ...(body.isPublished !== undefined && {
-            isPublished: body.isPublished,
           }),
           ...(body.sortOrder !== undefined && {
             sortOrder: body.sortOrder,
@@ -530,7 +548,6 @@ export class AdminCatalogService {
         positioning: body.positioning,
         principle: body.principle,
         safetyNotes: body.safetyNotes ?? null,
-        isPublished: body.isPublished ?? false,
       },
     });
 
@@ -561,9 +578,6 @@ export class AdminCatalogService {
         }),
         ...(body.safetyNotes !== undefined && {
           safetyNotes: body.safetyNotes ?? null,
-        }),
-        ...(body.isPublished !== undefined && {
-          isPublished: body.isPublished,
         }),
       },
     });

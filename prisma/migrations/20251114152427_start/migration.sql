@@ -124,7 +124,6 @@ CREATE TABLE "StaticPage" (
     "id" SERIAL NOT NULL,
     "type" "StaticPageType" NOT NULL,
     "slug" TEXT NOT NULL,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "StaticPage_pkey" PRIMARY KEY ("id")
@@ -333,7 +332,6 @@ CREATE TABLE "ServiceCategory" (
     "slug" TEXT NOT NULL,
     "description" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ServiceCategory_pkey" PRIMARY KEY ("id")
@@ -365,7 +363,6 @@ CREATE TABLE "Service" (
     "benefit2" TEXT,
     "ctaText" TEXT,
     "ctaUrl" TEXT,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -487,7 +484,6 @@ CREATE TABLE "Device" (
     "positioning" TEXT NOT NULL,
     "principle" TEXT NOT NULL,
     "safetyNotes" TEXT,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Device_pkey" PRIMARY KEY ("id")
@@ -638,7 +634,6 @@ CREATE UNIQUE INDEX "StaticPage_type_key" ON "StaticPage"("type");
 CREATE UNIQUE INDEX "StaticPage_slug_key" ON "StaticPage"("slug");
 
 -- CreateIndex
-CREATE INDEX "StaticPage_isPublished_idx" ON "StaticPage"("isPublished");
 
 -- CreateIndex
 CREATE INDEX "HomeDirection_homePageId_order_idx" ON "HomeDirection"("homePageId", "order");
@@ -668,7 +663,6 @@ CREATE UNIQUE INDEX "SeoDevice_deviceId_key" ON "SeoDevice"("deviceId");
 CREATE UNIQUE INDEX "ServiceCategory_slug_key" ON "ServiceCategory"("slug");
 
 -- CreateIndex
-CREATE INDEX "ServiceCategory_isPublished_idx" ON "ServiceCategory"("isPublished");
 
 -- CreateIndex
 CREATE INDEX "CategoryImage_categoryId_order_idx" ON "CategoryImage"("categoryId", "order");
@@ -680,7 +674,6 @@ CREATE UNIQUE INDEX "Service_slug_key" ON "Service"("slug");
 CREATE INDEX "Service_categoryId_idx" ON "Service"("categoryId");
 
 -- CreateIndex
-CREATE INDEX "Service_isPublished_idx" ON "Service"("isPublished");
 
 -- CreateIndex
 CREATE INDEX "ServicePriceExtended_serviceId_order_idx" ON "ServicePriceExtended"("serviceId", "order");
@@ -692,7 +685,6 @@ CREATE INDEX "ServiceImage_serviceId_order_idx" ON "ServiceImage"("serviceId", "
 CREATE UNIQUE INDEX "Device_slug_key" ON "Device"("slug");
 
 -- CreateIndex
-CREATE INDEX "Device_isPublished_idx" ON "Device"("isPublished");
 
 -- CreateIndex
 CREATE INDEX "DeviceImage_deviceId_order_idx" ON "DeviceImage"("deviceId", "order");
