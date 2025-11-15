@@ -542,16 +542,17 @@ export class AdminCatalogService {
   }
 
   async createDevice(body: DeviceBody) {
-    const device = await this.app.prisma.device.create({
-      data: {
-        brand: body.brand,
-        model: body.model,
-        slug: body.slug,
-        positioning: body.positioning,
-        principle: body.principle,
-        safetyNotes: body.safetyNotes ?? null,
-      },
-    });
+    return this.app.prisma.$transaction(async (tx) => {
+      const device = await tx.device.create({
+        data: {
+          brand: body.brand,
+          model: body.model,
+          slug: body.slug,
+          positioning: body.positioning,
+          principle: body.principle,
+          safetyNotes: body.safetyNotes ?? null,
+        },
+      });
 
       if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
         await tx.deviceImage.create({
@@ -600,23 +601,23 @@ export class AdminCatalogService {
         throw this.app.httpErrors.notFound('Аппарат не найден');
       }
 
-    const device = await this.app.prisma.device.update({
-      where: { id },
-      data: {
-        ...(body.brand !== undefined && { brand: body.brand }),
-        ...(body.model !== undefined && { model: body.model }),
-        ...(body.slug !== undefined && { slug: body.slug }),
-        ...(body.positioning !== undefined && {
-          positioning: body.positioning,
-        }),
-        ...(body.principle !== undefined && {
-          principle: body.principle,
-        }),
-        ...(body.safetyNotes !== undefined && {
-          safetyNotes: body.safetyNotes ?? null,
-        }),
-      },
-    });
+      await tx.device.update({
+        where: { id },
+        data: {
+          ...(body.brand !== undefined && { brand: body.brand }),
+          ...(body.model !== undefined && { model: body.model }),
+          ...(body.slug !== undefined && { slug: body.slug }),
+          ...(body.positioning !== undefined && {
+            positioning: body.positioning,
+          }),
+          ...(body.principle !== undefined && {
+            principle: body.principle,
+          }),
+          ...(body.safetyNotes !== undefined && {
+            safetyNotes: body.safetyNotes ?? null,
+          }),
+        },
+      });
 
       if (body.heroImageFileId !== undefined) {
         await tx.deviceImage.deleteMany({
