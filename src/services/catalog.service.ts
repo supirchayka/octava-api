@@ -38,7 +38,6 @@ export class CatalogService {
    */
   async getServiceCategories() {
     const categories = await this.app.prisma.serviceCategory.findMany({
-      where: { isPublished: true },
       orderBy: { name: "asc" },
       include: {
         _count: {
@@ -64,7 +63,7 @@ export class CatalogService {
       where: { slug },
     });
 
-    if (!category || !category.isPublished) {
+    if (!category) {
       return null;
     }
 
@@ -76,7 +75,7 @@ export class CatalogService {
         },
       }),
       this.app.prisma.service.findMany({
-        where: { categoryId: category.id, isPublished: true },
+        where: { categoryId: category.id },
         orderBy: { name: "asc" },
       }),
     ]);
@@ -116,7 +115,7 @@ export class CatalogService {
       },
     });
 
-    if (!service || !service.isPublished) {
+    if (!service) {
       return null;
     }
 
@@ -291,7 +290,6 @@ export class CatalogService {
    */
   async getDevicesList() {
     const devices = await this.app.prisma.device.findMany({
-      where: { isPublished: true },
       orderBy: [{ brand: "asc" }, { model: "asc" }],
     });
 
@@ -312,7 +310,7 @@ export class CatalogService {
       where: { slug },
     });
 
-    if (!device || !device.isPublished) {
+    if (!device) {
       return null;
     }
 
