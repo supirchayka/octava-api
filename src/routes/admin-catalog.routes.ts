@@ -51,13 +51,12 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['name', 'slug'],
+          required: ['name'],
           properties: {
             name: { type: 'string' },
-            slug: { type: 'string' },
             description: { type: 'string', nullable: true },
-            isPublished: { type: 'boolean' },
             sortOrder: { type: 'integer' },
+            heroImageFileId: { type: 'integer', nullable: true },
             seo: seoSchema,
           },
         },
@@ -82,10 +81,9 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           type: 'object',
           properties: {
             name: { type: 'string' },
-            slug: { type: 'string' },
             description: { type: 'string', nullable: true },
-            isPublished: { type: 'boolean' },
             sortOrder: { type: 'integer' },
+            heroImageFileId: { type: 'integer', nullable: true },
             seo: seoSchema,
           },
         },
@@ -120,11 +118,10 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['categoryId', 'name', 'slug', 'shortOffer'],
+          required: ['categoryId', 'name', 'shortOffer'],
           properties: {
             categoryId: { type: 'integer' },
             name: { type: 'string' },
-            slug: { type: 'string' },
             shortOffer: { type: 'string' },
             priceFrom: { type: 'number', nullable: true },
             durationMinutes: { type: 'integer', nullable: true },
@@ -132,7 +129,6 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             benefit2: { type: 'string', nullable: true },
             ctaText: { type: 'string', nullable: true },
             ctaUrl: { type: 'string', nullable: true },
-            isPublished: { type: 'boolean' },
             sortOrder: { type: 'integer' },
 
             heroImageFileId: { type: 'integer', nullable: true },
@@ -171,7 +167,6 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             categoryId: { type: 'integer' },
             name: { type: 'string' },
-            slug: { type: 'string' },
             shortOffer: { type: 'string' },
             priceFrom: { type: 'number', nullable: true },
             durationMinutes: { type: 'integer', nullable: true },
@@ -179,7 +174,6 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             benefit2: { type: 'string', nullable: true },
             ctaText: { type: 'string', nullable: true },
             ctaUrl: { type: 'string', nullable: true },
-            isPublished: { type: 'boolean' },
             sortOrder: { type: 'integer' },
 
             heroImageFileId: { type: 'integer', nullable: true },
@@ -232,15 +226,19 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
       schema: {
         body: {
           type: 'object',
-          required: ['brand', 'model', 'slug', 'positioning', 'principle'],
+          required: ['brand', 'model', 'positioning', 'principle'],
           properties: {
             brand: { type: 'string' },
             model: { type: 'string' },
-            slug: { type: 'string' },
             positioning: { type: 'string' },
             principle: { type: 'string' },
             safetyNotes: { type: 'string', nullable: true },
-            isPublished: { type: 'boolean' },
+            heroImageFileId: { type: 'integer', nullable: true },
+            galleryImageFileIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              nullable: true,
+            },
             seo: seoSchema,
           },
         },
@@ -266,11 +264,15 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             brand: { type: 'string' },
             model: { type: 'string' },
-            slug: { type: 'string' },
             positioning: { type: 'string' },
             principle: { type: 'string' },
             safetyNotes: { type: 'string', nullable: true },
-            isPublished: { type: 'boolean' },
+            heroImageFileId: { type: 'integer', nullable: true },
+            galleryImageFileIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              nullable: true,
+            },
             seo: seoSchema,
           },
         },
