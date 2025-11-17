@@ -5,7 +5,7 @@
 ## 1. Общие правила
 - **Базовый URL** совпадает с адресом бэкенда (например, `https://api.octava.local`). Все пути ниже начинаются относительно него.
 - **Авторизация.** Каждый маршрут `/admin/*` требует JWT токен в заголовке `Authorization: Bearer <accessToken>`. Токен выдаётся после логина, срок жизни задаётся переменной `JWT_ACCESS_EXPIRES_IN` (по умолчанию 15 минут).【F:src/services/auth.service.ts†L6-L120】
-- **Формат данных.** Админские ручки принимают/возвращают JSON, кроме `/admin/files/upload`, который работает через `multipart/form-data` с одним файлом.【F:src/routes/admin-files.routes.ts†L5-L15】【F:src/services/admin-files.service.ts†L15-L57】
+- **Формат данных.** Админские ручки принимают/возвращают JSON, кроме `/admin/files/upload`. Для него поддерживаются два режима: классический `multipart/form-data` с одним файлом либо «сырой» бинарный поток (например, `fetch` с `Blob`). Во втором случае рекомендуется указать заголовок `X-Filename`, чтобы сервер сохранил исходное расширение.【F:src/routes/admin-files.routes.ts†L5-L15】【F:src/services/admin-files.service.ts†L122-L187】
 - **Медиа-идентификаторы.** Любое изображение или документ сначала загружается через `/admin/files/upload`. Ответ содержит `id` и `path` — их фронт хранит и подставляет далее в полях `heroImageFileId`, `galleryImageFileIds`, `ogImageId` и т.д.【F:src/services/admin-files.service.ts†L32-L56】【F:prisma/schema.prisma†L150-L158】
 
 ## 2. Аутентификация
@@ -44,8 +44,10 @@
 
 ## 3. Работа с файлами и изображениями
 ### 3.1 Загрузка файла — POST /admin/files/upload
-- **Формат:** `multipart/form-data` с единственным полем `file`.
-- **Ограничения:** до 20 МБ; MIME определяет тип (`IMAGE` или `DOCUMENT`). Файл записывается в `uploads/<uuid>.<ext>`, а запись в таблице `File` хранит `id`, `path`, `mime`, `sizeBytes`, а также опциональные размеры изображения.【F:src/services/admin-files.service.ts†L15-L57】【F:prisma/schema.prisma†L150-L158】
+- **Формат:**
+  - `multipart/form-data` с единственным полем `file`.
+  - Либо POST, где тело — чистый бинарный поток (Blob/ArrayBuffer). При таком запросе можно передать `Content-Type` любого поддерживаемого формата (JPEG, PNG, WEBP, PDF и т.п.). Если заголовок `Content-Type` или `X-Filename` отсутствует, сервер определит тип по сигнатуре и добавит расширение сам.
+- **Ограничения:** до 20 МБ; MIME автоматически классифицируется как `IMAGE` или `DOCUMENT`. Файл записывается в `uploads/<uuid>.<ext>`, а запись в таблице `File` хранит `id`, `path`, `mime`, `sizeBytes`, а также опциональные размеры изображения.【F:src/services/admin-files.service.ts†L96-L187】【F:prisma/schema.prisma†L150-L158】
 - **Ответ (201):**
   ```json
   {
