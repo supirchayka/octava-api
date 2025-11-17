@@ -82,6 +82,8 @@
 ### 4.1 Категории услуг
 | Метод | Путь | Обязательные поля | Дополнительные поля |
 | --- | --- | --- | --- |
+| GET | `/admin/catalog/categories` | — | возвращает список категорий с HERO/SEO |
+| GET | `/admin/catalog/categories/:id` | `id` из URL | возвращает конкретную категорию |
 | POST | `/admin/catalog/categories` | `name: string` | `description?: string`, `sortOrder?: number`, `heroImageFileId?: number`, `seo?: SeoBody` |
 | PUT | `/admin/catalog/categories/:id` | — (все поля опциональны) | те же, что и в POST |
 | DELETE | `/admin/catalog/categories/:id` | `id` из URL | — |
@@ -89,6 +91,55 @@
 **SeoBody** включает `metaTitle`, `metaDescription`, `canonicalUrl`, `robotsIndex`, `robotsFollow`, `ogTitle`, `ogDescription`, `ogImageId`. Любое поле можно опустить или передать `null`. 【F:src/routes/admin-catalog.routes.ts†L45-L112】
 
 > Slug категории создаётся автоматически из `name` по правилам §3.3 и возвращается в ответе.
+
+**Ответ GET /admin/catalog/categories (200):**
+```json
+[
+  {
+    "id": 12,
+    "slug": "inekcii",
+    "name": "Инъекции",
+    "description": "Малоинвазивные процедуры",
+    "sortOrder": 20,
+    "heroImageFileId": 345,
+    "heroImage": {
+      "id": 901,
+      "fileId": 345,
+      "order": 0,
+      "alt": "Инъекционная процедура",
+      "caption": null,
+      "file": {
+        "id": 345,
+        "url": "/uploads/hero.png",
+        "originalName": "hero.png",
+        "mime": "image/png",
+        "width": 1600,
+        "height": 900
+      }
+    },
+    "seo": {
+      "metaTitle": "Инъекционные процедуры",
+      "metaDescription": "Краткое описание",
+      "canonicalUrl": null,
+      "robotsIndex": true,
+      "robotsFollow": true,
+      "ogTitle": "Инъекции",
+      "ogDescription": null,
+      "ogImageId": 678,
+      "ogImage": {
+        "id": 678,
+        "url": "/uploads/og.png",
+        "originalName": "og.png",
+        "mime": "image/png",
+        "width": 1200,
+        "height": 630
+      }
+    }
+  }
+]
+```
+
+**Ответ GET /admin/catalog/categories/:id (200)** — тот же объект, что и в списке. Используйте `heroImageFileId` и `seo.ogImageId`, чтобы заполнить форму редактирования без дополнительных запросов.【F:src/services/admin-catalog.service.ts†L86-L165】
 
 **Пример создания:**
 ```http
@@ -122,6 +173,60 @@ Content-Type: application/json
 > HERO привяжется автоматически, если `heroImageFileId` не `null`. При `PUT` значение `null` удалит текущий HERO; отсутствие поля оставит его без изменений.【F:src/services/admin-catalog.service.ts†L94-L165】
 
 ### 4.2 Услуги
+#### GET /admin/catalog/services
+- `query.categoryId?: number` — фильтрация по категории.
+- **Ответ:** массив объектов
+```json
+{
+  "id": 44,
+  "slug": "smas-lifting",
+  "categoryId": 12,
+  "categoryName": "Инъекции",
+  "name": "SMAS-лифтинг",
+  "shortOffer": "Быстрый лифтинг без реабилитации",
+  "priceFrom": 19000,
+  "durationMinutes": 90,
+  "benefit1": "Клинически доказанный результат",
+  "benefit2": "Одной процедуры достаточно",
+  "ctaText": "Записаться",
+  "ctaUrl": "/forms/service?s=smas-lifting",
+  "sortOrder": 0,
+  "heroImageFileId": 345,
+  "heroImage": {
+    "id": 901,
+    "fileId": 345,
+    "purpose": "HERO",
+    "order": 0,
+    "file": { "id": 345, "url": "/uploads/hero.png", "mime": "image/png", "width": 1600, "height": 900 }
+  },
+  "galleryImageFileIds": [346, 347],
+  "galleryImages": [
+    { "id": 902, "fileId": 346, "order": 0, "purpose": "GALLERY", "file": { "id": 346, "url": "/uploads/gallery-1.png", "mime": "image/png", "width": 1200, "height": 800 } },
+    { "id": 903, "fileId": 347, "order": 1, "purpose": "GALLERY", "file": { "id": 347, "url": "/uploads/gallery-2.png", "mime": "image/png", "width": 1200, "height": 800 } }
+  ],
+  "usedDeviceIds": [5, 9],
+  "servicePricesExtended": [
+    { "id": 80, "title": "SMAS лицо", "price": 19000, "durationMinutes": 60, "type": "BASE", "sessionsCount": null, "order": 0, "isActive": true },
+    { "id": 81, "title": "SMAS лицо+шея", "price": 26000, "durationMinutes": 90, "type": "PACKAGE", "sessionsCount": null, "order": 2, "isActive": true }
+  ],
+  "seo": {
+    "metaTitle": "SMAS-лифтинг в OCTAVA",
+    "metaDescription": "Передовое оборудование",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "SMAS-лифтинг",
+    "ogDescription": null,
+    "ogImageId": 678,
+    "ogImage": { "id": 678, "url": "/uploads/og.png", "mime": "image/png", "width": 1200, "height": 630 }
+  }
+}
+```
+- Массивы уже приходят в порядке показа, числовые поля приведены к number, файлы содержат URL — можно сразу рисовать предпросмотры списков и форм.【F:src/routes/admin-catalog.routes.ts†L116-L181】【F:src/services/admin-catalog.service.ts†L309-L459】
+
+#### GET /admin/catalog/services/:id
+- Возвращает один объект услуги в том же формате (404, если `id` не найден).
+
 **Схема запроса (POST /admin/catalog/services):**
 - Базовые поля: `categoryId`, `name`, `shortOffer` (обязательные); опциональные `priceFrom`, `durationMinutes`, `benefit1`, `benefit2`, `ctaText`, `ctaUrl`, `sortOrder`. Slug генерируется автоматически из `name`.
 - Медиа/связи: `heroImageFileId?: number`, `galleryImageFileIds?: number[]`, `usedDeviceIds?: number[]`.
@@ -235,6 +340,36 @@ Content-Type: application/json
 > Ответ построен на реальном `include`, поэтому фронтенд может заполнить форму редактирования без дополнительных запросов.【F:src/services/admin-catalog.service.ts†L343-L353】
 
 ### 4.3 Аппараты
+#### GET /admin/catalog/devices
+- **Ответ:** массив
+```json
+{
+  "id": 5,
+  "slug": "ulthera-system",
+  "brand": "Ulthera",
+  "model": "System",
+  "positioning": "SMAS-лифтинг",
+  "principle": "Ультразвук",
+  "safetyNotes": "Процедура под контролем врача",
+  "heroImageFileId": 777,
+  "heroImage": { "id": 1101, "fileId": 777, "purpose": "HERO", "order": 0, "file": { "id": 777, "url": "/uploads/hero-device.png", "mime": "image/png", "width": 1600, "height": 900 } },
+  "galleryImageFileIds": [778, 779],
+  "galleryImages": [ { "id": 1102, "fileId": 778, "order": 0, "purpose": "GALLERY", "file": { "id": 778, "url": "/uploads/device-1.png", "mime": "image/png" } } ],
+  "seo": {
+    "metaTitle": "Аппарат Ulthera",
+    "metaDescription": "Лифтинг без разрезов",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogImageId": 888,
+    "ogImage": { "id": 888, "url": "/uploads/device-og.png", "mime": "image/png" }
+  }
+}
+```
+- `heroImageFileId` и `galleryImageFileIds` можно напрямую проставлять в формах, `heroImage.file.url` подходит для предпросмотра.
+
+#### GET /admin/catalog/devices/:id
+- Возвращает единичный объект аппарата в том же формате (404, если `id` не найден).【F:src/routes/admin-catalog.routes.ts†L183-L247】【F:src/services/admin-catalog.service.ts†L461-L642】
 **POST /admin/catalog/devices**
 - Обязательные поля: `brand`, `model`, `positioning`, `principle`. Slug генерируется автоматически из `brand + model`.
 - Опциональные: `safetyNotes`, `heroImageFileId`, `galleryImageFileIds`, `seo` (та же структура).

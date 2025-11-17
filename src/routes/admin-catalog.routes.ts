@@ -44,6 +44,31 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
 
   /* ========== Categories ========== */
 
+  app.get(
+    '/admin/catalog/categories',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.listCategories,
+  );
+
+  app.get(
+    '/admin/catalog/categories/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+    },
+    controller.getCategory,
+  );
+
   app.post(
     '/admin/catalog/categories',
     {
@@ -110,6 +135,39 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
   );
 
   /* ========== Services ========== */
+
+  app.get(
+    '/admin/catalog/services',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            categoryId: { type: 'integer' },
+          },
+        },
+      },
+    },
+    controller.listServices,
+  );
+
+  app.get(
+    '/admin/catalog/services/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+    },
+    controller.getService,
+  );
 
   app.post(
     '/admin/catalog/services',
@@ -218,6 +276,31 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
   );
 
   /* ========== Devices ========== */
+
+  app.get(
+    '/admin/catalog/devices',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.listDevices,
+  );
+
+  app.get(
+    '/admin/catalog/devices/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+    },
+    controller.getDevice,
+  );
 
   app.post(
     '/admin/catalog/devices',

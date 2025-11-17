@@ -108,6 +108,14 @@
 Все нижеперечисленные пути требуют JWT и роль ADMIN/EDITOR.
 
 ### 4.1 Каталог
+#### GET /admin/catalog/categories
+- **Ответ:** массив категорий `{ id, slug, name, description, sortOrder, heroImageFileId, heroImage?, seo? }`, где `heroImage` содержит `imageId`, `fileId`, `order`, `alt`, `caption` и вложенный `file` `{ id, url, mime, originalName, width?, height? }`.
+- Используйте `heroImage.file.url` для предпросмотра обложки в таблицах.
+
+#### GET /admin/catalog/categories/:id
+- **Ответ:** одиночная категория с теми же полями, что и список. Возвращает 404, если `id` не существует.
+- Подходит для заполнения формы редактирования — `heroImageFileId` можно подставить обратно в PATCH/PUT, `seo.ogImageId` содержит файл для Open Graph.
+
 #### POST /admin/catalog/categories
 - **Тело:** `{ name, description?, sortOrder?, heroImageFileId?, seo? }`. Slug генерируется автоматически из `name`, поэтому поле не передаём.
 - **Ответ:** созданная категория `{ id, name, slug, description, sortOrder, ... }`.
@@ -120,6 +128,15 @@
 
 #### DELETE /admin/catalog/categories/:id
 - Удаляет категорию; ответ `204 No Content`.
+
+#### GET /admin/catalog/services
+- **Query:** `categoryId?: number` — позволяет отфильтровать услуги внутри выбранной категории.
+- **Ответ:** массив полных карточек с полями `{ id, slug, categoryId, categoryName, name, shortOffer, priceFrom, durationMinutes, benefit1, benefit2, ctaText, ctaUrl, sortOrder, heroImageFileId, heroImage?, galleryImageFileIds[], galleryImages[], usedDeviceIds[], servicePricesExtended[], seo? }`.
+- `galleryImages[]` повторяет порядок, переданный при сохранении, а каждый элемент содержит `file` с готовым URL.
+
+#### GET /admin/catalog/services/:id
+- **Ответ:** полный объект услуги в том же формате, что и список. Если `id` не найден, вернётся 404.
+- Используйте эти данные для подстановки значений в форму (массивы можно редактировать на клиенте и отправлять целиком).
 
 #### POST /admin/catalog/services
 - **Тело:**
@@ -137,6 +154,13 @@
 
 #### DELETE /admin/catalog/services/:id
 - Ответ `204 No Content`.
+
+#### GET /admin/catalog/devices
+- **Ответ:** массив аппаратов `{ id, slug, brand, model, positioning, principle, safetyNotes, heroImageFileId, heroImage?, galleryImageFileIds[], galleryImages[], seo? }`.
+- `heroImage` и `galleryImages` содержат вложенные файлы с URL/размерами для предпросмотра.
+
+#### GET /admin/catalog/devices/:id
+- **Ответ:** одиночный аппарат с тем же набором полей. Возвращает 404 при неверном `id`.
 
 #### POST /admin/catalog/devices
 - **Тело:** `{ brand, model, positioning, principle, safetyNotes?, heroImageFileId?, galleryImageFileIds?, seo? }`. Slug генерируется из `brand + model`.

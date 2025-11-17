@@ -2,6 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { ImagePurpose, ServicePriceType } from '@prisma/client';
+import { buildFileUrl } from '../utils/files';
 import { randomSlugSuffix, slugify } from '../utils/slug';
 
 /**
@@ -46,7 +47,7 @@ export interface ServicePriceExtendedBody {
   isActive?: boolean;
 }
 
-/* ========== Услуга ========== */
+  /* ========== Услуга ========== */
 
 export interface ServiceBody {
   categoryId: number;
@@ -90,6 +91,92 @@ type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
 export class AdminCatalogService {
   constructor(private app: FastifyInstance) {}
 
+  private mapFile(file?: {
+    id: number;
+    path: string;
+    originalName: string;
+    mime: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+  } | null) {
+    if (!file) return null;
+
+    return {
+      id: file.id,
+      url: buildFileUrl(file.path),
+      originalName: file.originalName,
+      mime: file.mime,
+      sizeBytes: file.sizeBytes,
+      width: file.width ?? null,
+      height: file.height ?? null,
+    };
+  }
+
+  private mapImage(image?: {
+    id: number;
+    fileId: number;
+    purpose: ImagePurpose;
+    order: number;
+    alt: string | null;
+    caption: string | null;
+    file: {
+      id: number;
+      path: string;
+      originalName: string;
+      mime: string;
+      sizeBytes: number;
+      width: number | null;
+      height: number | null;
+    };
+  } | null) {
+    if (!image) return null;
+
+    return {
+      id: image.id,
+      fileId: image.fileId,
+      purpose: image.purpose,
+      order: image.order,
+      alt: image.alt ?? null,
+      caption: image.caption ?? null,
+      file: this.mapFile(image.file),
+    };
+  }
+
+  private mapSeoEntity(seo?: {
+    metaTitle: string | null;
+    metaDescription: string | null;
+    canonicalUrl: string | null;
+    robotsIndex: boolean | null;
+    robotsFollow: boolean | null;
+    ogTitle: string | null;
+    ogDescription: string | null;
+    ogImageId: number | null;
+    ogImage?: {
+      id: number;
+      path: string;
+      originalName: string;
+      mime: string;
+      sizeBytes: number;
+      width: number | null;
+      height: number | null;
+    } | null;
+  } | null) {
+    if (!seo) return null;
+
+    return {
+      metaTitle: seo.metaTitle,
+      metaDescription: seo.metaDescription,
+      canonicalUrl: seo.canonicalUrl,
+      robotsIndex: seo.robotsIndex ?? null,
+      robotsFollow: seo.robotsFollow ?? null,
+      ogTitle: seo.ogTitle,
+      ogDescription: seo.ogDescription,
+      ogImageId: seo.ogImageId ?? null,
+      ogImage: this.mapFile(seo.ogImage ?? null),
+    };
+  }
+
   private async slugExists(
     db: PrismaClientLike,
     entity: 'category' | 'service' | 'device',
@@ -132,6 +219,66 @@ export class AdminCatalogService {
   }
 
   /* ===================== CATEGORY ===================== */
+
+  async listCategories() {
+    const categories = await this.app.prisma.serviceCategory.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+      include: {
+        images: {
+          include: { file: true },
+        },
+        seo: {
+          include: { ogImage: true },
+        },
+      },
+    });
+
+    return categories.map((category) => {
+      const heroImage = category.images.find(
+        (img) => img.purpose === ImagePurpose.HERO,
+      );
+
+      return {
+        id: category.id,
+        slug: category.slug,
+        name: category.name,
+        description: category.description,
+        sortOrder: category.sortOrder,
+        heroImageFileId: heroImage?.fileId ?? null,
+        heroImage: this.mapImage(heroImage) ?? null,
+        seo: this.mapSeoEntity(category.seo),
+      };
+    });
+  }
+
+  async getCategoryById(id: number) {
+    const category = await this.app.prisma.serviceCategory.findUnique({
+      where: { id },
+      include: {
+        images: { include: { file: true } },
+        seo: { include: { ogImage: true } },
+      },
+    });
+
+    if (!category) {
+      throw this.app.httpErrors.notFound('Категория не найдена');
+    }
+
+    const heroImage = category.images.find(
+      (img) => img.purpose === ImagePurpose.HERO,
+    );
+
+    return {
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      sortOrder: category.sortOrder,
+      heroImageFileId: heroImage?.fileId ?? null,
+      heroImage: this.mapImage(heroImage) ?? null,
+      seo: this.mapSeoEntity(category.seo),
+    };
+  }
 
   async createCategory(body: CategoryBody) {
     const slug = await this.generateEntitySlug(
@@ -412,6 +559,97 @@ export class AdminCatalogService {
     });
   }
 
+  private mapServiceResponse(service: Prisma.ServiceGetPayload<{
+    include: {
+      category: true;
+      images: { include: { file: true } };
+      devices: true;
+      pricesExtended: true;
+      seo: { include: { ogImage: true } };
+    };
+  }>) {
+    const heroImage = service.images.find(
+      (img) => img.purpose === ImagePurpose.HERO,
+    );
+    const galleryImages = service.images.filter(
+      (img) => img.purpose === ImagePurpose.GALLERY,
+    );
+
+    return {
+      id: service.id,
+      slug: service.slug,
+      categoryId: service.categoryId,
+      categoryName: service.category.name,
+      name: service.name,
+      shortOffer: service.shortOffer,
+      priceFrom:
+        service.priceFrom !== null
+          ? Number(service.priceFrom)
+          : null,
+      durationMinutes: service.durationMinutes,
+      benefit1: service.benefit1,
+      benefit2: service.benefit2,
+      ctaText: service.ctaText,
+      ctaUrl: service.ctaUrl,
+      sortOrder: service.sortOrder,
+      heroImageFileId: heroImage?.fileId ?? null,
+      heroImage: this.mapImage(heroImage) ?? null,
+      galleryImageFileIds: galleryImages.map((img) => img.fileId),
+      galleryImages: galleryImages.map((img) => this.mapImage(img)!),
+      usedDeviceIds: service.devices.map((device) => device.deviceId),
+      servicePricesExtended: service.pricesExtended.map((price) => ({
+        id: price.id,
+        title: price.title,
+        price: Number(price.price),
+        durationMinutes: price.durationMinutes,
+        type: price.type,
+        sessionsCount: price.sessionsCount,
+        order: price.order,
+        isActive: price.isActive,
+      })),
+      seo: this.mapSeoEntity(service.seo),
+    };
+  }
+
+  async listServices(params: { categoryId?: number } = {}) {
+    const services = await this.app.prisma.service.findMany({
+      where: {
+        ...(params.categoryId !== undefined && {
+          categoryId: params.categoryId,
+        }),
+      },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+      include: {
+        category: true,
+        images: { include: { file: true } },
+        devices: true,
+        pricesExtended: { orderBy: { order: 'asc' } },
+        seo: { include: { ogImage: true } },
+      },
+    });
+
+    return services.map((service) => this.mapServiceResponse(service));
+  }
+
+  async getServiceById(id: number) {
+    const service = await this.app.prisma.service.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        images: { include: { file: true } },
+        devices: true,
+        pricesExtended: { orderBy: { order: 'asc' } },
+        seo: { include: { ogImage: true } },
+      },
+    });
+
+    if (!service) {
+      throw this.app.httpErrors.notFound('Услуга не найдена');
+    }
+
+    return this.mapServiceResponse(service);
+  }
+
   async updateService(id: number, body: ServiceBody) {
     return this.app.prisma.$transaction(async (tx) => {
       const existing = await tx.service.findUnique({ where: { id } });
@@ -660,6 +898,63 @@ export class AdminCatalogService {
 
       return full!;
     });
+  }
+
+  private mapDeviceResponse(device: Prisma.DeviceGetPayload<{
+    include: {
+      images: { include: { file: true } };
+      seo: { include: { ogImage: true } };
+    };
+  }>) {
+    const heroImage = device.images.find(
+      (img) => img.purpose === ImagePurpose.HERO,
+    );
+    const galleryImages = device.images.filter(
+      (img) => img.purpose === ImagePurpose.GALLERY,
+    );
+
+    return {
+      id: device.id,
+      slug: device.slug,
+      brand: device.brand,
+      model: device.model,
+      positioning: device.positioning,
+      principle: device.principle,
+      safetyNotes: device.safetyNotes,
+      heroImageFileId: heroImage?.fileId ?? null,
+      heroImage: this.mapImage(heroImage) ?? null,
+      galleryImageFileIds: galleryImages.map((img) => img.fileId),
+      galleryImages: galleryImages.map((img) => this.mapImage(img)!),
+      seo: this.mapSeoEntity(device.seo),
+    };
+  }
+
+  async listDevices() {
+    const devices = await this.app.prisma.device.findMany({
+      orderBy: [{ brand: 'asc' }, { model: 'asc' }],
+      include: {
+        images: { include: { file: true } },
+        seo: { include: { ogImage: true } },
+      },
+    });
+
+    return devices.map((device) => this.mapDeviceResponse(device));
+  }
+
+  async getDeviceById(id: number) {
+    const device = await this.app.prisma.device.findUnique({
+      where: { id },
+      include: {
+        images: { include: { file: true } },
+        seo: { include: { ogImage: true } },
+      },
+    });
+
+    if (!device) {
+      throw this.app.httpErrors.notFound('Аппарат не найден');
+    }
+
+    return this.mapDeviceResponse(device);
   }
 
   async updateDevice(id: number, body: DeviceBody) {
