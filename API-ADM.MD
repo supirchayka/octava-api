@@ -318,12 +318,11 @@
 
 ## 5. Управление статическими страницами
 
-Каждый маршрут возвращает `204 No Content` при успехе. Передаём только изменяемые поля.
+Для каждой страницы доступны два маршрута: `GET /admin/pages/...` возвращает текущий контент и SEO, `PUT /admin/pages/...` частично обновляет данные. PUT-эндпоинты отвечают `204 No Content`, поэтому после сохранения можно вызвать соответствующий GET, чтобы отрендерить актуальные значения.
 
-### PUT `/admin/pages/home`
-Поля: `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`.
+### `/admin/pages/home`
 
-**Body пример**
+**GET Response 200**
 ```json
 {
   "heroTitle": "OCTAVA",
@@ -331,22 +330,72 @@
   "heroCtaText": "Записаться",
   "heroCtaUrl": "/contacts",
   "subheroTitle": "Компетенции",
+  "subheroSubtitle": "Лидеры аппаратной косметологии",
   "interiorText": "Новые фото интерьера",
-  "seo": { "metaTitle": "Главная OCTAVA" }
+  "seo": { "metaTitle": "Главная OCTAVA", "metaDescription": "..." }
 }
 ```
 
-### PUT `/admin/pages/about`
-Поля: `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo`.
+**PUT Body** — поля `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`.
 
-### PUT `/admin/pages/contacts`
-Поля: `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo`.
+### `/admin/pages/about`
 
-### PUT `/admin/pages/personal-data-policy`
-Поля: `title`, `body`, `seo`.
+**GET Response 200**
+```json
+{
+  "heroTitle": "OCTAVA — эксперты", 
+  "heroDescription": "Сочетаем аппаратные и инъекционные методики",
+  "howWeAchieveText": "Работаем по международным протоколам",
+  "heroCtaTitle": "Нужна консультация?",
+  "heroCtaSubtitle": "Оставьте заявку",
+  "seo": { "metaTitle": "О клинике OCTAVA" }
+}
+```
 
-### PUT `/admin/pages/privacy-policy`
-Поля: `title`, `body`, `seo`.
+**PUT Body** — `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo`.
+
+### `/admin/pages/contacts`
+
+**GET Response 200**
+```json
+{
+  "phoneMain": "+7 (495) 000-00-00",
+  "email": "info@octava.ru",
+  "telegramUrl": "https://t.me/octava",
+  "whatsappUrl": "https://wa.me/79990000000",
+  "addressText": "Москва, ул. Пример, 10",
+  "yandexMapUrl": "https://yandex.ru/maps/...",
+  "seo": { "metaTitle": "Контакты клиники" }
+}
+```
+
+**PUT Body** — `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo`.
+
+### `/admin/pages/personal-data-policy`
+
+**GET Response 200**
+```json
+{
+  "title": "Политика обработки персональных данных",
+  "body": "<h1>...<\/h1>",
+  "seo": { "metaTitle": "Политика ПДн" }
+}
+```
+
+**PUT Body** — `title`, `body`, `seo`.
+
+### `/admin/pages/privacy-policy`
+
+**GET Response 200**
+```json
+{
+  "title": "Политика конфиденциальности",
+  "body": "<p>...<\/p>",
+  "seo": { "metaTitle": "Privacy" }
+}
+```
+
+**PUT Body** — `title`, `body`, `seo`.
 
 ## 6. Лиды
 

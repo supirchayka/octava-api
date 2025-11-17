@@ -175,10 +175,15 @@
 
 ### 4.2 Админ-страницы
 Все endpoints принимают соответствующие тела и возвращают `204 No Content`.
+- **GET /admin/pages/home:** отдаёт текущий контент главной страницы + SEO, чтобы заполнить форму редактирования.
 - **PUT /admin/pages/home:** поля `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`.
+- **GET /admin/pages/about:** возвращает hero «О клинике», текст «Как мы работаем» и CTA.
 - **PUT /admin/pages/about:** поля `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo`.
+- **GET /admin/pages/contacts:** текущие контакты, адрес, карта и SEO.
 - **PUT /admin/pages/contacts:** `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo`.
+- **GET /admin/pages/personal-data-policy:** заголовок, HTML-тело и SEO политики ПДн.
 - **PUT /admin/pages/personal-data-policy:** `title`, `body`, `seo`.
+- **GET /admin/pages/privacy-policy:** данные политики конфиденциальности.
 - **PUT /admin/pages/privacy-policy:** `title`, `body`, `seo`.
 
 ### 4.3 Админ — организация

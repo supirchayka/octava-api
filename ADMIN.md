@@ -422,15 +422,15 @@ Content-Type: application/json
 ```
 
 ## 5. Статические страницы
-Каждый маршрут `PUT /admin/pages/...` принимает частичный объект и апсертит данные и SEO. Фронтенд может отправлять только изменённые поля.
+Каждая страница имеет пару маршрутов: `GET /admin/pages/...` возвращает текущий контент и SEO для заполнения формы, `PUT /admin/pages/...` частично обновляет данные (можно передавать только изменённые поля и обнулять значения через `null`).
 
-| Путь | Назначение | Поля | Особенности |
+| Страница | GET → ответ | PUT → тело | Особенности |
 | --- | --- | --- | --- |
-| `/admin/pages/home` | Обновление главной | `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo` | Любое поле можно обнулить, передав `null`. Создание происходит автоматически, если записи не было.【F:src/routes/admin-pages.routes.ts†L8-L42】【F:src/services/admin-pages.service.ts†L120-L169】 |
-| `/admin/pages/about` | Блок «О клинике» + CTA | `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo` | Если CTA-поля переданы пустыми строками, блок удаляется (герой останется).【F:src/routes/admin-pages.routes.ts†L44-L76】【F:src/services/admin-pages.service.ts†L173-L236】 |
-| `/admin/pages/contacts` | Контакты и карта | `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo` | Поля `email`, `telegramUrl`, `whatsappUrl` и карта могут быть `null`. 【F:src/routes/admin-pages.routes.ts†L78-L112】【F:src/services/admin-pages.service.ts†L238-L277】 |
-| `/admin/pages/personal-data-policy` | Политика ПДн | `title`, `body`, `seo` | Удобно хранить HTML/markdown в `body`. 【F:src/routes/admin-pages.routes.ts†L113-L142】【F:src/services/admin-pages.service.ts†L281-L316】 |
-| `/admin/pages/privacy-policy` | Политика конфиденциальности | те же | Поведение идентично предыдущему. 【F:src/routes/admin-pages.routes.ts†L144-L173】【F:src/services/admin-pages.service.ts†L281-L316】 |
+| Главная (`/admin/pages/home`) | `{ "heroTitle": "...", "heroSubtitle": "...", "heroCtaText": "...", "heroCtaUrl": "...", "subheroTitle": "...", "subheroSubtitle": "...", "interiorText": "...", "seo": { ... } }` | `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo` | Любое поле можно обнулить, передав `null`. Создание происходит автоматически, если записи не было.【F:src/routes/admin-pages.routes.ts†L8-L47】【F:src/services/admin-pages.service.ts†L120-L207】 |
+| «О клинике» (`/admin/pages/about`) | `{ "heroTitle": "...", "heroDescription": "...", "howWeAchieveText": "...", "heroCtaTitle": "...", "heroCtaSubtitle": "...", "seo": { ... } }` | `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo` | Если CTA-поля переданы пустыми строками, блок удаляется (герой останется).【F:src/routes/admin-pages.routes.ts†L49-L86】【F:src/services/admin-pages.service.ts†L209-L274】 |
+| Контакты (`/admin/pages/contacts`) | `{ "phoneMain": "...", "email": "...", "telegramUrl": "...", "whatsappUrl": "...", "addressText": "...", "yandexMapUrl": "...", "seo": { ... } }` | `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo` | `email`/мессенджеры/карта могут быть `null` — это очистит поле. 【F:src/routes/admin-pages.routes.ts†L88-L125】【F:src/services/admin-pages.service.ts†L276-L323】 |
+| Политика ПДн (`/admin/pages/personal-data-policy`) | `{ "title": "...", "body": "...", "seo": { ... } }` | `title`, `body`, `seo` | Можно хранить HTML/markdown в `body`. 【F:src/routes/admin-pages.routes.ts†L127-L166】【F:src/services/admin-pages.service.ts†L325-L372】 |
+| Политика конфиденциальности (`/admin/pages/privacy-policy`) | `{ "title": "...", "body": "...", "seo": { ... } }` | `title`, `body`, `seo` | Поведение идентично предыдущему. 【F:src/routes/admin-pages.routes.ts†L168-L207】【F:src/services/admin-pages.service.ts†L325-L372】 |
 
 **Пример запроса (About):**
 ```json
