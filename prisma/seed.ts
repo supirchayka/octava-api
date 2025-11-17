@@ -20,14 +20,17 @@ async function ensureAdmin() {
   const email = process.env.ADMIN_EMAIL || 'admin@octava.ru';
   const password = process.env.ADMIN_PASSWORD || 'changeme';
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return;
-
   const passwordHash = await hashPassword(password);
 
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email },
+    create: {
       email,
+      passwordHash,
+      role: Role.ADMIN,
+      isActive: true,
+    },
+    update: {
       passwordHash,
       role: Role.ADMIN,
       isActive: true,
