@@ -9,13 +9,14 @@
 - **Медиа-идентификаторы.** Любое изображение или документ сначала загружается через `/admin/files/upload`. Ответ содержит `id` и `path` — их фронт хранит и подставляет далее в полях `heroImageFileId`, `galleryImageFileIds`, `ogImageId` и т.д.【F:src/services/admin-files.service.ts†L32-L56】【F:prisma/schema.prisma†L150-L158】
 
 ## 2. Аутентификация
+Перед запуском фронтенда выполните `npm run prisma:seed` (или `npx prisma db seed`), чтобы гарантированно существовал администратор. По умолчанию сид создаёт пользователя `admin@octava.ru` с паролем `changeme`; эти значения можно изменить через переменные `ADMIN_EMAIL`/`ADMIN_PASSWORD` перед выполнением сида.【F:prisma/seed.ts†L17-L34】
 ### 2.1 POST /auth/login
 - **Назначение:** получить пару токенов.
 - **Тело запроса:**
   ```json
   {
-    "email": "admin@example.com",
-    "password": "secret123"
+    "email": "admin@octava.ru",
+    "password": "changeme"
   }
   ```
 - **Ответ (200):**
@@ -23,7 +24,7 @@
   {
     "user": {
       "id": 1,
-      "email": "admin@example.com",
+      "email": "admin@octava.ru",
       "role": "ADMIN"
     },
     "accessToken": "<jwt>",
@@ -39,7 +40,7 @@
 
 ### 2.3 GET /auth/me
 - **Назначение:** получить профиль текущего пользователя и подтвердить валидность accessToken.
-- **Ответ:** `{ "id": 1, "email": "admin@example.com", "role": "EDITOR" }`. Ошибка 401, если токен недействителен.【F:src/services/auth.service.ts†L123-L139】
+- **Ответ:** `{ "id": 1, "email": "admin@octava.ru", "role": "ADMIN" }`. Ошибка 401, если токен недействителен.【F:src/services/auth.service.ts†L123-L139】
 
 ## 3. Работа с файлами и изображениями
 ### 3.1 Загрузка файла — POST /admin/files/upload

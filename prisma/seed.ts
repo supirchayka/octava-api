@@ -12,24 +12,23 @@ import {
   DeviceCertType,
   DeviceDocType,
 } from '@prisma/client';
+import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
 
 async function ensureAdmin() {
   const email = process.env.ADMIN_EMAIL || 'admin@octava.ru';
+  const password = process.env.ADMIN_PASSWORD || 'changeme';
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return;
 
-  // Заглушка: bcrypt-хеш для пароля "changeme".
-  // На бою лучше сгенерировать реальный хеш и подставить сюда.
-  const defaultHash =
-    '$2b$10$uXfV8oO3e2c7kq9OQnWmF.GO8cG5vO0xQb9J7H6wz6i2s6G5Hh6hW';
+  const passwordHash = await hashPassword(password);
 
   await prisma.user.create({
     data: {
       email,
-      passwordHash: defaultHash,
+      passwordHash,
       role: Role.ADMIN,
       isActive: true,
     },
