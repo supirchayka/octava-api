@@ -27,6 +27,19 @@ export class AdminCatalogController {
 
   /* ========== Categories ========== */
 
+  listCategories = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const categories = await this.service.listCategories();
+    return reply.send(categories);
+  };
+
+  getCategory = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { id } = request.params as { id: string };
+    const category = await this.service.getCategoryById(Number(id));
+    return reply.send(category);
+  };
+
   createCategory = async (request: FastifyRequest, reply: FastifyReply) => {
     this.ensureEditor(request);
     const body = request.body as CategoryBody;
@@ -51,6 +64,22 @@ export class AdminCatalogController {
 
   /* ========== Services ========== */
 
+  listServices = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { categoryId } = request.query as { categoryId?: string };
+    const services = await this.service.listServices({
+      categoryId: categoryId ? Number(categoryId) : undefined,
+    });
+    return reply.send(services);
+  };
+
+  getService = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { id } = request.params as { id: string };
+    const service = await this.service.getServiceById(Number(id));
+    return reply.send(service);
+  };
+
   createService = async (request: FastifyRequest, reply: FastifyReply) => {
     this.ensureEditor(request);
     const body = request.body as ServiceBody;
@@ -74,6 +103,19 @@ export class AdminCatalogController {
   };
 
   /* ========== Devices ========== */
+
+  listDevices = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const devices = await this.service.listDevices();
+    return reply.send(devices);
+  };
+
+  getDevice = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { id } = request.params as { id: string };
+    const device = await this.service.getDeviceById(Number(id));
+    return reply.send(device);
+  };
 
   createDevice = async (request: FastifyRequest, reply: FastifyReply) => {
     this.ensureEditor(request);

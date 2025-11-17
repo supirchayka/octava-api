@@ -12,24 +12,26 @@ import {
   DeviceCertType,
   DeviceDocType,
 } from '@prisma/client';
+import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
 
 async function ensureAdmin() {
   const email = process.env.ADMIN_EMAIL || 'admin@octava.ru';
+  const password = process.env.ADMIN_PASSWORD || 'changeme';
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) return;
+  const passwordHash = await hashPassword(password);
 
-  // Заглушка: bcrypt-хеш для пароля "changeme".
-  // На бою лучше сгенерировать реальный хеш и подставить сюда.
-  const defaultHash =
-    '$2b$10$uXfV8oO3e2c7kq9OQnWmF.GO8cG5vO0xQb9J7H6wz6i2s6G5Hh6hW';
-
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email },
+    create: {
       email,
-      passwordHash: defaultHash,
+      passwordHash,
+      role: Role.ADMIN,
+      isActive: true,
+    },
+    update: {
+      passwordHash,
       role: Role.ADMIN,
       isActive: true,
     },
@@ -125,7 +127,6 @@ async function seedStaticPages(files: {
       create: {
         type,
         slug: slugs[type],
-        isPublished: true,
       },
     });
   }
@@ -350,13 +351,11 @@ async function seedCatalog(files: { ogId: number }) {
     update: {
       name: 'Массаж',
       description: 'Классические и авторские массажные техники.',
-      isPublished: true,
     },
     create: {
       name: 'Массаж',
       slug: 'massazh',
       description: 'Классические и авторские массажные техники.',
-      isPublished: true,
     },
   });
 
@@ -365,13 +364,11 @@ async function seedCatalog(files: { ogId: number }) {
     update: {
       name: 'SPA',
       description: 'SPA-ритуалы и уходовые программы.',
-      isPublished: true,
     },
     create: {
       name: 'SPA',
       slug: 'spa',
       description: 'SPA-ритуалы и уходовые программы.',
-      isPublished: true,
     },
   });
 
@@ -416,7 +413,6 @@ async function seedCatalog(files: { ogId: number }) {
       principle: 'Высокочастотная энергия, стимулирующая выработку коллагена.',
       safetyNotes:
         'Сертифицированное оборудование, минимальный период реабилитации.',
-      isPublished: true,
     },
     create: {
       brand: 'BrandX',
@@ -426,7 +422,6 @@ async function seedCatalog(files: { ogId: number }) {
       principle: 'Высокочастотная энергия, стимулирующая выработку коллагена.',
       safetyNotes:
         'Сертифицированное оборудование, минимальный период реабилитации.',
-      isPublished: true,
     },
   });
 
@@ -508,7 +503,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Снятие мышечных зажимов.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
     create: {
       name: 'Тайский массаж',
@@ -521,7 +515,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Снятие мышечных зажимов.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
   });
 
@@ -673,7 +666,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Улучшение состояния кожи и общего самочувствия.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
     create: {
       name: 'SPA-ритуал Relax',
@@ -686,7 +678,6 @@ async function seedCatalog(files: { ogId: number }) {
       benefit2: 'Улучшение состояния кожи и общего самочувствия.',
       ctaText: 'Записаться',
       ctaUrl: '/contacts',
-      isPublished: true,
     },
   });
 
@@ -713,7 +704,6 @@ async function seedCatalog(files: { ogId: number }) {
   });
 
   const services = await prisma.service.findMany({
-    where: { isPublished: true },
     orderBy: { id: 'asc' },
     take: 4,
   });

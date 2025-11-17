@@ -62,6 +62,20 @@ export class AdminPagesService {
     });
   }
 
+  private mapSeoResponse(seo: any | null) {
+    if (!seo) return null;
+    return {
+      metaTitle: seo.metaTitle,
+      metaDescription: seo.metaDescription,
+      canonicalUrl: seo.canonicalUrl,
+      robotsIndex: seo.robotsIndex,
+      robotsFollow: seo.robotsFollow,
+      ogTitle: seo.ogTitle,
+      ogDescription: seo.ogDescription,
+      ogImageId: seo.ogImageId,
+    } as SeoBody;
+  }
+
   /**
    * Общий апсерт SEO-настроек для статической страницы
    */
@@ -119,6 +133,31 @@ export class AdminPagesService {
 
   /* ===================== HOME ===================== */
 
+  async getHomePage() {
+    const page = await this.app.prisma.staticPage.findUnique({
+      where: { type: StaticPageType.HOME },
+      include: {
+        home: true,
+        seo: true,
+      },
+    });
+
+    if (!page) {
+      throw this.app.httpErrors.notFound('Страница HOME не найдена');
+    }
+
+    return {
+      heroTitle: page.home?.heroTitle ?? null,
+      heroSubtitle: page.home?.heroSubtitle ?? null,
+      heroCtaText: page.home?.heroCtaText ?? null,
+      heroCtaUrl: page.home?.heroCtaUrl ?? null,
+      subheroTitle: page.home?.subheroTitle ?? null,
+      subheroSubtitle: page.home?.subheroSubtitle ?? null,
+      interiorText: page.home?.interiorText ?? null,
+      seo: this.mapSeoResponse(page.seo),
+    } as HomePageBody;
+  }
+
   async updateHomePage(input: HomePageBody) {
     const page = await this.ensureStaticPage(StaticPageType.HOME);
 
@@ -169,6 +208,33 @@ export class AdminPagesService {
   }
 
   /* ===================== ABOUT ===================== */
+
+  async getAboutPage() {
+    const page = await this.app.prisma.staticPage.findUnique({
+      where: { type: StaticPageType.ABOUT },
+      include: {
+        about: {
+          include: {
+            heroCta: true,
+          },
+        },
+        seo: true,
+      },
+    });
+
+    if (!page) {
+      throw this.app.httpErrors.notFound('Страница ABOUT не найдена');
+    }
+
+    return {
+      heroTitle: page.about?.heroTitle ?? null,
+      heroDescription: page.about?.heroDescription ?? null,
+      howWeAchieveText: page.about?.howWeAchieveText ?? null,
+      heroCtaTitle: page.about?.heroCta?.title ?? null,
+      heroCtaSubtitle: page.about?.heroCta?.subtitle ?? null,
+      seo: this.mapSeoResponse(page.seo),
+    } as AboutPageBody;
+  }
 
   async updateAboutPage(input: AboutPageBody) {
     const page = await this.ensureStaticPage(StaticPageType.ABOUT);
@@ -236,6 +302,30 @@ export class AdminPagesService {
   }
 
   /* ===================== CONTACTS ===================== */
+
+  async getContactsPage() {
+    const page = await this.app.prisma.staticPage.findUnique({
+      where: { type: StaticPageType.CONTACTS },
+      include: {
+        contacts: true,
+        seo: true,
+      },
+    });
+
+    if (!page) {
+      throw this.app.httpErrors.notFound('Страница CONTACTS не найдена');
+    }
+
+    return {
+      phoneMain: page.contacts?.phoneMain ?? null,
+      email: page.contacts?.email ?? null,
+      telegramUrl: page.contacts?.telegramUrl ?? null,
+      whatsappUrl: page.contacts?.whatsappUrl ?? null,
+      addressText: page.contacts?.addressText ?? null,
+      yandexMapUrl: page.contacts?.yandexMapUrl ?? null,
+      seo: this.mapSeoResponse(page.seo),
+    } as ContactsPageBody;
+  }
 
   async updateContactsPage(input: ContactsPageBody) {
     const page = await this.ensureStaticPage(StaticPageType.CONTACTS);
@@ -313,5 +403,33 @@ export class AdminPagesService {
 
   async updatePrivacyPolicy(input: PolicyPageBody) {
     return this.updatePolicyByType(StaticPageType.PRIVACY_POLICY, input);
+  }
+
+  private async getPolicyByType(type: StaticPageType) {
+    const page = await this.app.prisma.staticPage.findUnique({
+      where: { type },
+      include: {
+        policy: true,
+        seo: true,
+      },
+    });
+
+    if (!page) {
+      throw this.app.httpErrors.notFound('Страница не найдена');
+    }
+
+    return {
+      title: page.policy?.title ?? null,
+      body: page.policy?.body ?? null,
+      seo: this.mapSeoResponse(page.seo),
+    } as PolicyPageBody;
+  }
+
+  async getPersonalDataPolicy() {
+    return this.getPolicyByType(StaticPageType.PERSONAL_DATA_POLICY);
+  }
+
+  async getPrivacyPolicy() {
+    return this.getPolicyByType(StaticPageType.PRIVACY_POLICY);
   }
 }

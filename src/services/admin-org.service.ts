@@ -17,6 +17,28 @@ export interface OrgBody {
 export class AdminOrgService {
   constructor(private app: FastifyInstance) {}
 
+  async getOrganization() {
+    const org = await this.app.prisma.organization.findFirst({
+      orderBy: { id: 'asc' },
+    });
+
+    if (!org) {
+      return null;
+    }
+
+    return {
+      id: org.id,
+      fullName: org.fullName,
+      ogrn: org.ogrn,
+      inn: org.inn,
+      kpp: org.kpp,
+      address: org.address,
+      email: org.email,
+      createdAt: org.createdAt,
+      updatedAt: org.updatedAt,
+    };
+  }
+
   async upsertOrganization(input: OrgBody) {
     const existing = await this.app.prisma.organization.findFirst({
       orderBy: { id: 'asc' },
