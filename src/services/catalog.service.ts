@@ -11,6 +11,8 @@ export class CatalogService {
   private mapSeo(seo: any | null) {
     if (!seo) return null;
 
+    const ogImage = this.mapFileMeta(seo.ogImage);
+
     return {
       metaTitle: seo.metaTitle,
       metaDescription: seo.metaDescription,
@@ -19,15 +21,44 @@ export class CatalogService {
       robotsFollow: seo.robotsFollow,
       ogTitle: seo.ogTitle,
       ogDescription: seo.ogDescription,
-      ogImage: seo.ogImage
+      ogImage: ogImage
         ? {
-            url: buildFileUrl(seo.ogImage.path),
-            mime: seo.ogImage.mime,
-            width: seo.ogImage.width,
-            height: seo.ogImage.height,
-            alt: seo.ogImage.originalName,
+            ...ogImage,
+            alt: seo.ogImage?.originalName ?? null,
           }
         : null,
+    };
+  }
+
+  private mapFileMeta(file: any | null) {
+    if (!file) return null;
+
+    return {
+      id: file.id,
+      url: buildFileUrl(file.path),
+      originalName: file.originalName,
+      mime: file.mime,
+      sizeBytes: file.sizeBytes,
+      width: file.width ?? null,
+      height: file.height ?? null,
+    };
+  }
+
+  private mapImage(image: any | null) {
+    if (!image || !image.file) return null;
+
+    const file = this.mapFileMeta(image.file);
+    if (!file) return null;
+
+    return {
+      id: image.id,
+      fileId: image.fileId,
+      purpose: image.purpose,
+      order: image.order,
+      alt: image.alt ?? image.file.originalName,
+      caption: image.caption ?? null,
+      url: file.url,
+      file,
     };
   }
 
@@ -38,22 +69,43 @@ export class CatalogService {
    */
   async getServiceCategories() {
     const categories = await this.app.prisma.serviceCategory.findMany({
-      where: { isPublished: true },
-      orderBy: { name: "asc" },
+      orderBy: [
+        { sortOrder: "asc" },
+        { name: "asc" },
+      ],
       include: {
+        images: {
+          include: { file: true },
+          orderBy: { order: "asc" },
+        },
+        seo: {
+          include: { ogImage: true },
+        },
         _count: {
           select: { services: true },
         },
       },
     });
 
-    return categories.map((c) => ({
-      id: c.id,
-      slug: c.slug,
-      name: c.name,
-      description: c.description,
-      servicesCount: c._count.services,
-    }));
+    return categories.map((c) => {
+      const heroImage = c.images.find((img: any) => img.purpose === ImagePurpose.HERO);
+      const galleryImages = c.images
+        .filter((img: any) => img.purpose === ImagePurpose.GALLERY)
+        .map((img: any) => this.mapImage(img)!)
+        .filter(Boolean);
+
+      return {
+        id: c.id,
+        slug: c.slug,
+        name: c.name,
+        description: c.description,
+        sortOrder: c.sortOrder,
+        servicesCount: c._count.services,
+        seo: this.mapSeo(c.seo),
+        heroImage: this.mapImage(heroImage) ?? null,
+        galleryImages,
+      };
+    });
   }
 
   /**
@@ -62,24 +114,25 @@ export class CatalogService {
   async getServiceCategoryBySlug(slug: string) {
     const category = await this.app.prisma.serviceCategory.findUnique({
       where: { slug },
+      include: {
+        images: {
+          include: { file: true },
+          orderBy: { order: "asc" },
+        },
+        seo: {
+          include: { ogImage: true },
+        },
+      },
     });
 
-    if (!category || !category.isPublished) {
+    if (!category) {
       return null;
     }
 
-    const [seo, services] = await Promise.all([
-      this.app.prisma.seoCategory.findUnique({
-        where: { categoryId: category.id },
-        include: {
-          ogImage: true,
-        },
-      }),
-      this.app.prisma.service.findMany({
-        where: { categoryId: category.id, isPublished: true },
-        orderBy: { name: "asc" },
-      }),
-    ]);
+    const services = await this.app.prisma.service.findMany({
+      where: { categoryId: category.id },
+      orderBy: { name: "asc" },
+    });
 
     const servicesMapped = services.map((s) => ({
       id: s.id,
@@ -93,14 +146,23 @@ export class CatalogService {
       ctaUrl: s.ctaUrl,
     }));
 
+    const heroImage = category.images.find((img) => img.purpose === ImagePurpose.HERO);
+    const galleryImages = category.images
+      .filter((img) => img.purpose === ImagePurpose.GALLERY)
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
+
     return {
       category: {
         id: category.id,
         slug: category.slug,
         name: category.name,
         description: category.description,
+        sortOrder: category.sortOrder,
+        heroImage: this.mapImage(heroImage) ?? null,
+        galleryImages,
       },
-      seo: this.mapSeo(seo),
+      seo: this.mapSeo(category.seo),
       services: servicesMapped,
     };
   }
@@ -116,7 +178,7 @@ export class CatalogService {
       },
     });
 
-    if (!service || !service.isPublished) {
+    if (!service) {
       return null;
     }
 
@@ -184,33 +246,18 @@ export class CatalogService {
 
     const heroImages = images
       .filter((img) => img.purpose === ImagePurpose.HERO)
-      .map((img) => ({
-        id: img.id,
-        url: buildFileUrl(img.file.path),
-        alt: img.alt ?? img.file.originalName,
-        caption: img.caption,
-        order: img.order,
-      }));
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
 
     const galleryImages = images
       .filter((img) => img.purpose === ImagePurpose.GALLERY)
-      .map((img) => ({
-        id: img.id,
-        url: buildFileUrl(img.file.path),
-        alt: img.alt ?? img.file.originalName,
-        caption: img.caption,
-        order: img.order,
-      }));
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
 
     const inlineImages = images
       .filter((img) => img.purpose === ImagePurpose.INLINE)
-      .map((img) => ({
-        id: img.id,
-        url: buildFileUrl(img.file.path),
-        alt: img.alt ?? img.file.originalName,
-        caption: img.caption,
-        order: img.order,
-      }));
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
 
     const devices = deviceLinks.map((link) => ({
       id: link.device.id,
@@ -291,8 +338,18 @@ export class CatalogService {
    */
   async getDevicesList() {
     const devices = await this.app.prisma.device.findMany({
-      where: { isPublished: true },
-      orderBy: [{ brand: "asc" }, { model: "asc" }],
+      orderBy: [
+        { brand: "asc" },
+        { model: "asc" },
+      ],
+      include: {
+        images: {
+          where: { purpose: ImagePurpose.HERO },
+          orderBy: { order: "asc" },
+          take: 1,
+          include: { file: true },
+        },
+      },
     });
 
     return devices.map((d) => ({
@@ -301,6 +358,7 @@ export class CatalogService {
       brand: d.brand,
       model: d.model,
       positioning: d.positioning,
+      heroImage: this.mapImage(d.images[0]) ?? null,
     }));
   }
 
@@ -312,7 +370,7 @@ export class CatalogService {
       where: { slug },
     });
 
-    if (!device || !device.isPublished) {
+    if (!device) {
       return null;
     }
 
@@ -384,67 +442,34 @@ export class CatalogService {
 
     const heroImages = images
       .filter((img) => img.purpose === ImagePurpose.HERO)
-      .map((img) => ({
-        id: img.id,
-        url: buildFileUrl(img.file.path),
-        alt: img.alt ?? img.file.originalName,
-        caption: img.caption,
-        order: img.order,
-      }));
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
 
     const galleryImages = images
       .filter((img) => img.purpose === ImagePurpose.GALLERY)
-      .map((img) => ({
-        id: img.id,
-        url: buildFileUrl(img.file.path),
-        alt: img.alt ?? img.file.originalName,
-        caption: img.caption,
-        order: img.order,
-      }));
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
 
     const inlineImages = images
       .filter((img) => img.purpose === ImagePurpose.INLINE)
-      .map((img) => ({
-        id: img.id,
-        url: buildFileUrl(img.file.path),
-        alt: img.alt ?? img.file.originalName,
-        caption: img.caption,
-        order: img.order,
-      }));
+      .map((img) => this.mapImage(img)!)
+      .filter(Boolean);
 
     const certs = certBadges.map((c) => ({
       id: c.id,
       type: c.type,
       label: c.label,
-      image: c.image
-        ? {
-            id: c.image.id,
-            url: buildFileUrl(c.image.path),
-            alt: c.image.originalName,
-          }
-        : null,
-      file: c.file
-        ? {
-            id: c.file.id,
-            url: buildFileUrl(c.file.path),
-            mime: c.file.mime,
-            name: c.file.originalName,
-          }
-        : null,
+      image: this.mapFileMeta(c.image),
+      file: this.mapFileMeta(c.file),
     }));
 
     const docs = documents.map((d) => ({
       id: d.id,
       docType: d.docType,
       title: d.title,
-      file: d.file
-        ? {
-            id: d.file.id,
-            url: buildFileUrl(d.file.path),
-            mime: d.file.mime,
-            name: d.file.originalName,
-          }
-        : null,
+      issuedBy: d.issuedBy,
+      issuedAt: d.issuedAt,
+      file: this.mapFileMeta(d.file),
     }));
 
     const services = serviceLinks.map((link) => ({
@@ -479,13 +504,7 @@ export class CatalogService {
         id: a.id,
         name: a.name,
         description: a.description,
-        image: a.image
-          ? {
-              id: a.image.id,
-              url: buildFileUrl(a.image.path),
-              alt: a.image.originalName,
-            }
-          : null,
+        image: this.mapFileMeta(a.image),
       })),
       indications: indications.map((i) => i.text),
       contraindications: contraindications.map((c) => c.text),
