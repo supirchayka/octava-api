@@ -85,6 +85,15 @@ export interface DeviceBody {
 
 type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
 
+const categoryInclude = {
+  images: { include: { file: true } },
+  seo: { include: { ogImage: true } },
+} as const;
+
+type CategoryWithRelations = Prisma.ServiceCategoryGetPayload<{
+  include: typeof categoryInclude;
+}>;
+
 /**
  * Сервис админского каталога (категории, услуги, аппараты).
  */
@@ -177,6 +186,23 @@ export class AdminCatalogService {
     };
   }
 
+  private mapCategoryResponse(category: CategoryWithRelations) {
+    const heroImage = category.images.find(
+      (img) => img.purpose === ImagePurpose.HERO,
+    );
+
+    return {
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      sortOrder: category.sortOrder,
+      heroImageFileId: heroImage?.fileId ?? null,
+      heroImage: this.mapImage(heroImage) ?? null,
+      seo: this.mapSeoEntity(category.seo),
+    };
+  }
+
   private async slugExists(
     db: PrismaClientLike,
     entity: 'category' | 'service' | 'device',
@@ -218,161 +244,133 @@ export class AdminCatalogService {
     return candidate;
   }
 
+  private async syncCategoryHero(
+    db: PrismaClientLike,
+    categoryId: number,
+    heroImageFileId?: number | null,
+  ) {
+    if (heroImageFileId === undefined) {
+      return;
+    }
+
+    await db.categoryImage.deleteMany({
+      where: { categoryId, purpose: ImagePurpose.HERO },
+    });
+
+    if (heroImageFileId === null) {
+      return;
+    }
+
+    await db.categoryImage.create({
+      data: {
+        categoryId,
+        fileId: heroImageFileId,
+        purpose: ImagePurpose.HERO,
+        order: 0,
+      },
+    });
+  }
+
   /* ===================== CATEGORY ===================== */
 
   async listCategories() {
     const categories = await this.app.prisma.serviceCategory.findMany({
       orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-      include: {
-        images: {
-          include: { file: true },
-        },
-        seo: {
-          include: { ogImage: true },
-        },
-      },
+      include: categoryInclude,
     });
 
-    return categories.map((category) => {
-      const heroImage = category.images.find(
-        (img) => img.purpose === ImagePurpose.HERO,
-      );
-
-      return {
-        id: category.id,
-        slug: category.slug,
-        name: category.name,
-        description: category.description,
-        sortOrder: category.sortOrder,
-        heroImageFileId: heroImage?.fileId ?? null,
-        heroImage: this.mapImage(heroImage) ?? null,
-        seo: this.mapSeoEntity(category.seo),
-      };
-    });
+    return categories.map((category) => this.mapCategoryResponse(category));
   }
 
   async getCategoryById(id: number) {
     const category = await this.app.prisma.serviceCategory.findUnique({
       where: { id },
-      include: {
-        images: { include: { file: true } },
-        seo: { include: { ogImage: true } },
-      },
+      include: categoryInclude,
     });
 
     if (!category) {
       throw this.app.httpErrors.notFound('Категория не найдена');
     }
 
-    const heroImage = category.images.find(
-      (img) => img.purpose === ImagePurpose.HERO,
-    );
-
-    return {
-      id: category.id,
-      slug: category.slug,
-      name: category.name,
-      description: category.description,
-      sortOrder: category.sortOrder,
-      heroImageFileId: heroImage?.fileId ?? null,
-      heroImage: this.mapImage(heroImage) ?? null,
-      seo: this.mapSeoEntity(category.seo),
-    };
+    return this.mapCategoryResponse(category);
   }
 
   async createCategory(body: CategoryBody) {
-    const slug = await this.generateEntitySlug(
-      this.app.prisma,
-      'category',
-      body.name,
-    );
-    const category = await this.app.prisma.serviceCategory.create({
-      data: {
-        name: body.name,
-        slug,
-        description: body.description ?? null,
-        sortOrder: body.sortOrder ?? 0,
-      },
-    });
-
-    if (body.heroImageFileId !== undefined && body.heroImageFileId !== null) {
-      await this.app.prisma.categoryImage.create({
+    return this.app.prisma.$transaction(async (tx) => {
+      const slug = await this.generateEntitySlug(tx, 'category', body.name);
+      const category = await tx.serviceCategory.create({
         data: {
-          categoryId: category.id,
-          fileId: body.heroImageFileId,
-          purpose: ImagePurpose.HERO,
-          order: 0,
+          name: body.name,
+          slug,
+          description: body.description ?? null,
+          sortOrder: body.sortOrder ?? 0,
         },
       });
-    }
 
-    if (body.seo) {
-      await this.upsertCategorySeo(category.id, body.seo);
-    }
+      await this.syncCategoryHero(tx, category.id, body.heroImageFileId);
 
-    return category;
+      if (body.seo) {
+        await this.upsertCategorySeo(category.id, body.seo, tx);
+      }
+
+      const full = await tx.serviceCategory.findUnique({
+        where: { id: category.id },
+        include: categoryInclude,
+      });
+
+      return this.mapCategoryResponse(full!);
+    });
   }
 
   async updateCategory(id: number, body: CategoryBody) {
-    const existing = await this.app.prisma.serviceCategory.findUnique({
-      where: { id },
-    });
+    return this.app.prisma.$transaction(async (tx) => {
+      const existing = await tx.serviceCategory.findUnique({ where: { id } });
 
-    if (!existing) {
-      throw this.app.httpErrors.notFound('Категория не найдена');
-    }
+      if (!existing) {
+        throw this.app.httpErrors.notFound('Категория не найдена');
+      }
 
-    let slugToUpdate: string | undefined;
-    if (body.name !== undefined) {
-      slugToUpdate = await this.generateEntitySlug(
-        this.app.prisma,
-        'category',
-        body.name,
-        id,
-      );
-    }
+      let slugToUpdate: string | undefined;
+      if (body.name !== undefined && body.name.trim() !== existing.name.trim()) {
+        slugToUpdate = await this.generateEntitySlug(tx, 'category', body.name, id);
+      }
 
-    const category = await this.app.prisma.serviceCategory.update({
-      where: { id },
-      data: {
-        ...(body.name !== undefined && { name: body.name }),
-        ...(slugToUpdate && { slug: slugToUpdate }),
-        ...(body.description !== undefined && {
-          description: body.description ?? null,
-        }),
-        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
-      },
-    });
-
-    if (body.seo) {
-      await this.upsertCategorySeo(category.id, body.seo);
-    }
-
-    if (body.heroImageFileId !== undefined) {
-      await this.app.prisma.categoryImage.deleteMany({
-        where: { categoryId: id, purpose: ImagePurpose.HERO },
+      await tx.serviceCategory.update({
+        where: { id },
+        data: {
+          ...(body.name !== undefined && { name: body.name }),
+          ...(slugToUpdate && { slug: slugToUpdate }),
+          ...(body.description !== undefined && {
+            description: body.description ?? null,
+          }),
+          ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        },
       });
 
-      if (body.heroImageFileId !== null) {
-        await this.app.prisma.categoryImage.create({
-          data: {
-            categoryId: id,
-            fileId: body.heroImageFileId,
-            purpose: ImagePurpose.HERO,
-            order: 0,
-          },
-        });
-      }
-    }
+      await this.syncCategoryHero(tx, id, body.heroImageFileId);
 
-    return category;
+      if (body.seo) {
+        await this.upsertCategorySeo(id, body.seo, tx);
+      }
+
+      const full = await tx.serviceCategory.findUnique({
+        where: { id },
+        include: categoryInclude,
+      });
+
+      return this.mapCategoryResponse(full!);
+    });
   }
 
   async deleteCategory(id: number) {
     await this.app.prisma.serviceCategory.delete({ where: { id } });
   }
 
-  private async upsertCategorySeo(categoryId: number, seo: SeoCategoryBody) {
+  private async upsertCategorySeo(
+    categoryId: number,
+    seo: SeoCategoryBody,
+    db: PrismaClientLike = this.app.prisma,
+  ) {
     const updateData: any = {};
 
     if (seo.metaTitle !== undefined) {
@@ -400,7 +398,7 @@ export class AdminCatalogService {
       updateData.ogImageId = seo.ogImageId;
     }
 
-    await this.app.prisma.seoCategory.upsert({
+    await db.seoCategory.upsert({
       where: { categoryId },
       update: updateData,
       create: {
@@ -419,7 +417,11 @@ export class AdminCatalogService {
 
   /* ===================== SERVICE ===================== */
 
-  private async upsertServiceSeo(serviceId: number, seo: SeoServiceBody) {
+  private async upsertServiceSeo(
+    serviceId: number,
+    seo: SeoServiceBody,
+    db: PrismaClientLike = this.app.prisma,
+  ) {
     const updateData: any = {};
 
     if (seo.metaTitle !== undefined) {
@@ -447,7 +449,7 @@ export class AdminCatalogService {
       updateData.ogImageId = seo.ogImageId;
     }
 
-    await this.app.prisma.seoService.upsert({
+    await db.seoService.upsert({
       where: { serviceId },
       update: updateData,
       create: {
@@ -542,7 +544,7 @@ export class AdminCatalogService {
 
       // SEO
       if (body.seo) {
-        await this.upsertServiceSeo(service.id, body.seo);
+        await this.upsertServiceSeo(service.id, body.seo, tx);
       }
 
       const full = await tx.service.findUnique({
@@ -774,7 +776,7 @@ export class AdminCatalogService {
 
       // SEO
       if (body.seo) {
-        await this.upsertServiceSeo(id, body.seo);
+        await this.upsertServiceSeo(id, body.seo, tx);
       }
 
       const full = await tx.service.findUnique({
@@ -797,7 +799,11 @@ export class AdminCatalogService {
 
   /* ===================== DEVICE ===================== */
 
-  private async upsertDeviceSeo(deviceId: number, seo: SeoDeviceBody) {
+  private async upsertDeviceSeo(
+    deviceId: number,
+    seo: SeoDeviceBody,
+    db: PrismaClientLike = this.app.prisma,
+  ) {
     const updateData: any = {};
 
     if (seo.metaTitle !== undefined) {
@@ -825,7 +831,7 @@ export class AdminCatalogService {
       updateData.ogImageId = seo.ogImageId;
     }
 
-    await this.app.prisma.seoDevice.upsert({
+    await db.seoDevice.upsert({
       where: { deviceId },
       update: updateData,
       create: {
@@ -885,7 +891,7 @@ export class AdminCatalogService {
       }
 
       if (body.seo) {
-        await this.upsertDeviceSeo(device.id, body.seo);
+        await this.upsertDeviceSeo(device.id, body.seo, tx);
       }
 
       const full = await tx.device.findUnique({
@@ -1031,7 +1037,7 @@ export class AdminCatalogService {
       }
 
       if (body.seo) {
-        await this.upsertDeviceSeo(id, body.seo);
+        await this.upsertDeviceSeo(id, body.seo, tx);
       }
 
       const full = await tx.device.findUnique({
