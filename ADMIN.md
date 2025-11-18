@@ -424,34 +424,169 @@ Content-Type: application/json
 ```
 
 ## 5. Статические страницы
-Каждая страница имеет пару маршрутов: `GET /admin/pages/...` возвращает текущий контент и SEO для заполнения формы, `PUT /admin/pages/...` частично обновляет данные (можно передавать только изменённые поля и обнулять значения через `null`).
+Каждая страница управляется парой маршрутов: `GET /admin/pages/...` возвращает текущие значения для формы, `PUT /admin/pages/...` принимает частичное обновление (любой переданный ключ можно обнулить через `null`). Ниже — полные JSON-примеры.
 
-| Страница | GET → ответ | PUT → тело | Особенности |
-| --- | --- | --- | --- |
-| Главная (`/admin/pages/home`) | `{ "heroTitle": "...", "heroSubtitle": "...", "heroCtaText": "...", "heroCtaUrl": "...", "subheroTitle": "...", "subheroSubtitle": "...", "interiorText": "...", "seo": { ... } }` | `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo` | Любое поле можно обнулить, передав `null`. Создание происходит автоматически, если записи не было.【F:src/routes/admin-pages.routes.ts†L8-L47】【F:src/services/admin-pages.service.ts†L120-L207】 |
-| «О клинике» (`/admin/pages/about`) | `{ "heroTitle": "...", "heroDescription": "...", "howWeAchieveText": "...", "heroCtaTitle": "...", "heroCtaSubtitle": "...", "seo": { ... } }` | `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo` | Если CTA-поля переданы пустыми строками, блок удаляется (герой останется).【F:src/routes/admin-pages.routes.ts†L49-L86】【F:src/services/admin-pages.service.ts†L209-L274】 |
-| Контакты (`/admin/pages/contacts`) | `{ "phoneMain": "...", "email": "...", "telegramUrl": "...", "whatsappUrl": "...", "addressText": "...", "yandexMapUrl": "...", "seo": { ... } }` | `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo` | `email`/мессенджеры/карта могут быть `null` — это очистит поле. 【F:src/routes/admin-pages.routes.ts†L88-L125】【F:src/services/admin-pages.service.ts†L276-L323】 |
-| Политика ПДн (`/admin/pages/personal-data-policy`) | `{ "title": "...", "body": "...", "seo": { ... } }` | `title`, `body`, `seo` | Можно хранить HTML/markdown в `body`. 【F:src/routes/admin-pages.routes.ts†L127-L166】【F:src/services/admin-pages.service.ts†L325-L372】 |
-| Политика конфиденциальности (`/admin/pages/privacy-policy`) | `{ "title": "...", "body": "...", "seo": { ... } }` | `title`, `body`, `seo` | Поведение идентично предыдущему. 【F:src/routes/admin-pages.routes.ts†L168-L207】【F:src/services/admin-pages.service.ts†L325-L372】 |
+### 5.1 `/admin/pages/home`
+**GET Response 200**
+```json
+{
+  "heroTitle": "OCTAVA",
+  "heroSubtitle": "Клиника эстетической медицины",
+  "heroCtaText": "Записаться",
+  "heroCtaUrl": "/contacts",
+  "subheroTitle": "Комплексный подход",
+  "subheroSubtitle": "Аппаратные и инъекционные методики",
+  "interiorText": "Фотографии интерьера",
+  "seo": {
+    "metaTitle": "Главная OCTAVA",
+    "metaDescription": "Антивозрастная клиника",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": 345
+  }
+}
+```
 
-**Пример запроса (About):**
+**PUT Body (пример)**
+```json
+{
+  "heroTitle": "OCTAVA",
+  "heroSubtitle": "Экспертная косметология",
+  "heroCtaText": "Записаться",
+  "heroCtaUrl": "/forms/contact",
+  "subheroTitle": "Комплексный подход",
+  "subheroSubtitle": "Лучшие аппараты",
+  "interiorText": "Обновили фото",
+  "seo": { "metaTitle": "Главная OCTAVA", "ogImageId": 345 }
+}
+```
+
+### 5.2 `/admin/pages/about`
+**GET Response 200**
 ```json
 {
   "heroTitle": "OCTAVA — центр экспертной косметологии",
   "heroDescription": "Сочетаем аппаратные и инъекционные методики",
+  "howWeAchieveText": "Работаем по международным протоколам",
   "heroCtaTitle": "Нужна консультация?",
-  "heroCtaSubtitle": "Оставьте заявку",
+  "heroCtaSubtitle": null,
   "seo": {
     "metaTitle": "О клинике OCTAVA",
-    "metaDescription": "Кто мы и почему нам доверяют"
+    "metaDescription": "Почему нам доверяют",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
   }
 }
 ```
-Ответ — `204 No Content`; фронт может повторно запросить публичный `/pages/about`, чтобы показать предпросмотр.
+
+**PUT Body (пример)** — те же поля, любые могут быть опущены. `null` очищает значение CTA.
+
+### 5.3 `/admin/pages/contacts`
+**GET Response 200**
+```json
+{
+  "phoneMain": "+7 (495) 000-00-00",
+  "email": "info@octava.ru",
+  "telegramUrl": "https://t.me/octava",
+  "whatsappUrl": null,
+  "addressText": "Москва, ул. Примерная, 10",
+  "yandexMapUrl": "https://yandex.ru/map-widget/v1/?um=constructor%3A...",
+  "seo": {
+    "metaTitle": "Контакты OCTAVA",
+    "metaDescription": "Как нас найти",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
+}
+```
+
+**PUT Body (пример)**
+```json
+{
+  "phoneMain": "+7 (495) 000-00-00",
+  "email": "info@octava.ru",
+  "telegramUrl": "https://t.me/octava",
+  "whatsappUrl": "https://wa.me/79990000000",
+  "addressText": "Москва, ул. Примерная, 10",
+  "yandexMapUrl": "https://yandex.ru/maps/...",
+  "seo": { "metaTitle": "Контакты OCTAVA" }
+}
+```
+
+### 5.4 `/admin/pages/personal-data-policy`
+**GET Response 200**
+```json
+{
+  "title": "Политика обработки персональных данных",
+  "body": "<h1>1. Общие положения<\/h1>...",
+  "seo": {
+    "metaTitle": "Политика ПДн",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
+}
+```
+
+**PUT Body** — те же ключи; `body` допускает HTML/Markdown.
+
+### 5.5 `/admin/pages/privacy-policy`
+**GET Response 200**
+```json
+{
+  "title": "Политика конфиденциальности",
+  "body": "<p>Положения...<\/p>",
+  "seo": {
+    "metaTitle": "Privacy",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
+}
+```
+
+**PUT Body** — `title`, `body`, `seo`. Все поля частичные; `null` очищает данные.
 
 ## 6. Карточка организации
-`PUT /admin/org` принимает любой поднабор полей `fullName`, `ogrn`, `inn`, `kpp`, `address`, `email`. Если записи ещё нет, она будет создана с дефолтами; иначе обновится частично. Ответ — актуальная запись Organization (одна на весь проект).【F:src/routes/admin-org.routes.ts†L8-L28】【F:src/services/admin-org.service.ts†L4-L55】  
-**Пример тела:**
+### GET /admin/org
+```json
+{
+  "id": 1,
+  "fullName": "ООО \"Октава\"",
+  "ogrn": "1234567890123",
+  "inn": "7701234567",
+  "kpp": "770101001",
+  "address": "г. Москва, ул. Примерная, 1",
+  "email": "info@octava.ru",
+  "createdAt": "2024-01-01T10:00:00.000Z",
+  "updatedAt": "2025-05-17T09:00:00.000Z"
+}
+```
+Возвращает `null`, если карточка ещё не создана.
+
+### PUT /admin/org
+Принимает любой поднабор полей `fullName`, `ogrn`, `inn`, `kpp`, `address`, `email`. Если записи ещё нет, создаёт новую; иначе выполняет частичное обновление. Ответ — актуальный объект Organization.【F:src/routes/admin-org.routes.ts†L8-L28】【F:src/services/admin-org.service.ts†L4-L55】
+
+**Body (пример)**
 ```json
 {
   "fullName": "ООО \"Октава\"",

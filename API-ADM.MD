@@ -322,7 +322,7 @@
 
 ## 5. Управление статическими страницами
 
-Для каждой страницы доступны два маршрута: `GET /admin/pages/...` возвращает текущий контент и SEO, `PUT /admin/pages/...` частично обновляет данные. PUT-эндпоинты отвечают `204 No Content`, поэтому после сохранения можно вызвать соответствующий GET, чтобы отрендерить актуальные значения.
+Каждый маршрут `/admin/pages/...` работает в формате «GET для чтения, PUT для частичного сохранения». Ниже показаны полные JSON-ответы (все ключи присутствуют, даже если значение `null`).
 
 ### `/admin/pages/home`
 
@@ -330,29 +330,47 @@
 ```json
 {
   "heroTitle": "OCTAVA",
-  "heroSubtitle": "Главная страница",
+  "heroSubtitle": "Клиника эстетической медицины",
   "heroCtaText": "Записаться",
   "heroCtaUrl": "/contacts",
-  "subheroTitle": "Компетенции",
-  "subheroSubtitle": "Лидеры аппаратной косметологии",
-  "interiorText": "Новые фото интерьера",
-  "seo": { "metaTitle": "Главная OCTAVA", "metaDescription": "..." }
+  "subheroTitle": "Комплексный подход",
+  "subheroSubtitle": "Аппаратные и инъекционные методики",
+  "interiorText": "Фотографии интерьера",
+  "seo": {
+    "metaTitle": "Главная OCTAVA",
+    "metaDescription": "Антивозрастная клиника",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": 345
+  }
 }
 ```
 
-**PUT Body** — поля `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`.
+**PUT Body** — `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`. Любой переданный ключ допускает значение `null` для очистки.
 
 ### `/admin/pages/about`
 
 **GET Response 200**
 ```json
 {
-  "heroTitle": "OCTAVA — эксперты", 
+  "heroTitle": "OCTAVA — центр экспертной косметологии",
   "heroDescription": "Сочетаем аппаратные и инъекционные методики",
   "howWeAchieveText": "Работаем по международным протоколам",
   "heroCtaTitle": "Нужна консультация?",
-  "heroCtaSubtitle": "Оставьте заявку",
-  "seo": { "metaTitle": "О клинике OCTAVA" }
+  "heroCtaSubtitle": null,
+  "seo": {
+    "metaTitle": "О клинике OCTAVA",
+    "metaDescription": "Почему нам доверяют",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
 }
 ```
 
@@ -366,10 +384,19 @@
   "phoneMain": "+7 (495) 000-00-00",
   "email": "info@octava.ru",
   "telegramUrl": "https://t.me/octava",
-  "whatsappUrl": "https://wa.me/79990000000",
+  "whatsappUrl": null,
   "addressText": "Москва, ул. Пример, 10",
   "yandexMapUrl": "https://yandex.ru/maps/...",
-  "seo": { "metaTitle": "Контакты клиники" }
+  "seo": {
+    "metaTitle": "Контакты OCTAVA",
+    "metaDescription": "Как нас найти",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
 }
 ```
 
@@ -381,12 +408,21 @@
 ```json
 {
   "title": "Политика обработки персональных данных",
-  "body": "<h1>...<\/h1>",
-  "seo": { "metaTitle": "Политика ПДн" }
+  "body": "<h1>1. Общие положения<\/h1>...",
+  "seo": {
+    "metaTitle": "Политика ПДн",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
 }
 ```
 
-**PUT Body** — `title`, `body`, `seo`.
+**PUT Body** — `title`, `body`, `seo` (можно передавать HTML).
 
 ### `/admin/pages/privacy-policy`
 
@@ -394,8 +430,17 @@
 ```json
 {
   "title": "Политика конфиденциальности",
-  "body": "<p>...<\/p>",
-  "seo": { "metaTitle": "Privacy" }
+  "body": "<p>Положения...<\/p>",
+  "seo": {
+    "metaTitle": "Privacy",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImageId": null
+  }
 }
 ```
 

@@ -50,62 +50,732 @@
 | GET | /auth/me | — (нужен Bearer токен) | `{ id, email, role }` текущего пользователя. |
 
 ### 3.3 Публичный каталог
+Ниже приведены полные JSON-ответы (усечённые только по количеству элементов). Все поля, связанные с SEO и изображениями, всегда присутствуют в ответе — если данных нет, они приходят со значением `null` или пустым массивом.
+
 #### GET /service-categories
-- **Ответ:** массив категорий `{ id, slug, name, description, sortOrder, servicesCount, seo?, heroImage?, galleryImages[] }`.
-- `heroImage` и элементы `galleryImages` включают `fileId`, `purpose`, `order`, `alt`, `caption`, `url` и вложенный `file` `{ id, url, mime, originalName, sizeBytes, width?, height? }`.
+**Response 200**
+```json
+[
+  {
+    "id": 12,
+    "slug": "massazh",
+    "name": "Массаж",
+    "description": "Расслабляющие и лечебные техники",
+    "sortOrder": 10,
+    "servicesCount": 8,
+    "seo": {
+      "metaTitle": "Массаж — OCTAVA",
+      "metaDescription": "Линейка массажных программ",
+      "canonicalUrl": null,
+      "robotsIndex": true,
+      "robotsFollow": true,
+      "ogTitle": "Массаж",
+      "ogDescription": null,
+      "ogImage": {
+        "id": 501,
+        "url": "https://api.octava.local/uploads/massage-og.jpg",
+        "originalName": "massage-og.jpg",
+        "mime": "image/jpeg",
+        "sizeBytes": 128553,
+        "width": 1200,
+        "height": 630
+      }
+    },
+    "heroImage": {
+      "id": 910,
+      "fileId": 345,
+      "purpose": "HERO",
+      "order": 0,
+      "alt": "Процедура массажа",
+      "caption": null,
+      "url": "https://api.octava.local/uploads/massage-hero.jpg",
+      "file": {
+        "id": 345,
+        "url": "https://api.octava.local/uploads/massage-hero.jpg",
+        "originalName": "massage-hero.jpg",
+        "mime": "image/jpeg",
+        "sizeBytes": 256000,
+        "width": 1600,
+        "height": 900
+      }
+    },
+    "galleryImages": [
+      {
+        "id": 911,
+        "fileId": 346,
+        "purpose": "GALLERY",
+        "order": 0,
+        "alt": "Интерьер",
+        "caption": "Зал процедур",
+        "url": "https://api.octava.local/uploads/massage-gallery-1.jpg",
+        "file": {
+          "id": 346,
+          "url": "https://api.octava.local/uploads/massage-gallery-1.jpg",
+          "originalName": "massage-gallery-1.jpg",
+          "mime": "image/jpeg",
+          "sizeBytes": 182000,
+          "width": 1400,
+          "height": 900
+        }
+      }
+    ]
+  }
+]
+```
+> Если для категории нет HERO или галереи, поля `heroImage` и `galleryImages` приходят как `null` и `[]`, но ключи в JSON всегда присутствуют.
 
 #### GET /service-categories/:slug
-- **Ответ:** `{ category: { id, slug, name, description, sortOrder, heroImage?, galleryImages[] }, seo, services: [...] }`, где каждая услуга содержит `id, slug, name, shortOffer, priceFrom, durationMinutes, benefits[], ctaText, ctaUrl`.
-- Структура изображений совпадает с ответом списка.
-- **404:** если slug не найден.
+**Response 200**
+```json
+{
+  "category": {
+    "id": 12,
+    "slug": "massazh",
+    "name": "Массаж",
+    "description": "Расслабляющие и лечебные техники",
+    "sortOrder": 10,
+    "heroImage": {
+      "id": 910,
+      "fileId": 345,
+      "purpose": "HERO",
+      "order": 0,
+      "alt": "Процедура массажа",
+      "caption": null,
+      "url": "https://api.octava.local/uploads/massage-hero.jpg",
+      "file": {
+        "id": 345,
+        "url": "https://api.octava.local/uploads/massage-hero.jpg",
+        "originalName": "massage-hero.jpg",
+        "mime": "image/jpeg",
+        "sizeBytes": 256000,
+        "width": 1600,
+        "height": 900
+      }
+    },
+    "galleryImages": []
+  },
+  "seo": {
+    "metaTitle": "Массаж в OCTAVA",
+    "metaDescription": "Все массажные практики",
+    "canonicalUrl": "https://octava.ru/service-categories/massazh",
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "Массаж",
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "services": [
+    {
+      "id": 44,
+      "slug": "relaks-massazh",
+      "name": "Релакс-массаж",
+      "shortOffer": "Полный релакс за 60 минут",
+      "priceFrom": "4500",
+      "durationMinutes": 60,
+      "benefits": ["Антистресс", "Улучшает сон"],
+      "ctaText": "Записаться",
+      "ctaUrl": "/forms/service?slug=relaks-massazh"
+    }
+  ]
+}
+```
 
 #### GET /services/:slug
-- **Ответ:** объект с блоками:
-  - `service`: `{ id, slug, name, category: { id, slug, name } }`.
-  - `seo`: SEO-мета.
-  - `hero`: `{ title, shortOffer, priceFrom, durationMinutes, benefits[], ctaText, ctaUrl, images[] }`.
-    - Каждый элемент `images[]` содержит `fileId`, `purpose`, `order`, `alt`, `caption`, `url`, `file`.
-  - `about`: `{ whoIsFor, effect, principle, resultsTiming, courseSessions } | null`.
-  - `pricesExtended`: массив `{ id, title, price, durationMinutes, type, order }`.
-  - `indications[]`, `contraindications[]` — строки.
-  - `preparationChecklist[]` и `rehabChecklist[]` — элементы `{ id, text, order }`.
-  - `devices`: массив связанных аппаратов `{ id, slug, brand, model, positioning }`.
-  - `galleryImages[]` и `inlineImages[]`: `{ id, fileId, purpose, url, alt, caption, order, file }`.
-  - `faq[]`: `{ id, question, answer, order }`.
-  - `legalDisclaimer`: строка или `null`.
-- **404:** если slug не найден.
+**Response 200**
+```json
+{
+  "service": {
+    "id": 44,
+    "slug": "smas-lifting",
+    "name": "SMAS-лифтинг",
+    "category": {
+      "id": 12,
+      "slug": "massazh",
+      "name": "Массаж"
+    }
+  },
+  "seo": {
+    "metaTitle": "SMAS-лифтинг в OCTAVA",
+    "metaDescription": "Инновационная процедура",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "SMAS-лифтинг",
+    "ogDescription": "Безоперационный лифтинг",
+    "ogImage": {
+      "id": 777,
+      "url": "https://api.octava.local/uploads/smas-og.jpg",
+      "originalName": "smas-og.jpg",
+      "mime": "image/jpeg",
+      "sizeBytes": 120553,
+      "width": 1200,
+      "height": 630
+    }
+  },
+  "hero": {
+    "title": "SMAS-лифтинг",
+    "shortOffer": "Глубокое омоложение",
+    "priceFrom": "19000",
+    "durationMinutes": 90,
+    "benefits": ["Без наркоза", "Реабилитация 1 день"],
+    "ctaText": "Записаться",
+    "ctaUrl": "/forms/service?slug=smas-lifting",
+    "images": [
+      {
+        "id": 1001,
+        "fileId": 600,
+        "purpose": "HERO",
+        "order": 0,
+        "alt": "Процедура SMAS",
+        "caption": null,
+        "url": "https://api.octava.local/uploads/smas-hero.jpg",
+        "file": {
+          "id": 600,
+          "url": "https://api.octava.local/uploads/smas-hero.jpg",
+          "originalName": "smas-hero.jpg",
+          "mime": "image/jpeg",
+          "sizeBytes": 265555,
+          "width": 1600,
+          "height": 900
+        }
+      }
+    ]
+  },
+  "about": {
+    "whoIsFor": "Пациентам с выраженным птозом",
+    "effect": "Лифтинг овала лица",
+    "principle": "Сфокусированный ультразвук",
+    "resultsTiming": "1–2 недели",
+    "courseSessions": "1 процедура"
+  },
+  "pricesExtended": [
+    {
+      "id": 801,
+      "title": "SMAS лицо",
+      "price": "19000",
+      "durationMinutes": 60,
+      "type": "BASE",
+      "order": 0
+    },
+    {
+      "id": 802,
+      "title": "SMAS лицо + шея",
+      "price": "26000",
+      "durationMinutes": 90,
+      "type": "PACKAGE",
+      "order": 1
+    }
+  ],
+  "indications": ["Птоз мягких тканей", "Нечёткий овал"],
+  "contraindications": ["Беременность", "Имплантированный кардиостимулятор"],
+  "preparationChecklist": [
+    { "id": 61, "text": "За 24 часа исключить алкоголь", "order": 0 }
+  ],
+  "rehabChecklist": [
+    { "id": 71, "text": "Избегать сауны 7 дней", "order": 0 }
+  ],
+  "devices": [
+    {
+      "id": 5,
+      "slug": "ulthera",
+      "brand": "Ulthera",
+      "model": "System",
+      "positioning": "SMAS-лифтинг без хирургии"
+    }
+  ],
+  "galleryImages": [],
+  "inlineImages": [
+    {
+      "id": 1201,
+      "fileId": 777,
+      "purpose": "INLINE",
+      "order": 0,
+      "alt": "Схема лифтинга",
+      "caption": "Как работает метод",
+      "url": "https://api.octava.local/uploads/smas-inline.png",
+      "file": {
+        "id": 777,
+        "url": "https://api.octava.local/uploads/smas-inline.png",
+        "originalName": "smas-inline.png",
+        "mime": "image/png",
+        "sizeBytes": 12000,
+        "width": 900,
+        "height": 600
+      }
+    }
+  ],
+  "faq": [
+    { "id": 91, "question": "Больно ли?", "answer": "Дискомфорт минимален", "order": 0 }
+  ],
+  "legalDisclaimer": "Имеются противопоказания, требуется консультация специалиста"
+}
+```
 
 #### GET /devices
-- **Ответ:** список аппаратов `{ id, slug, brand, model, positioning, heroImage? }`, где `heroImage` описан той же структурой изображений.
+**Response 200**
+```json
+[
+  {
+    "id": 5,
+    "slug": "ulthera",
+    "brand": "Ulthera",
+    "model": "System",
+    "positioning": "SMAS-лифтинг без хирургии",
+    "heroImage": {
+      "id": 1301,
+      "fileId": 810,
+      "purpose": "HERO",
+      "order": 0,
+      "alt": "Аппарат Ulthera",
+      "caption": null,
+      "url": "https://api.octava.local/uploads/ulthera-hero.jpg",
+      "file": {
+        "id": 810,
+        "url": "https://api.octava.local/uploads/ulthera-hero.jpg",
+        "originalName": "ulthera-hero.jpg",
+        "mime": "image/jpeg",
+        "sizeBytes": 310000,
+        "width": 1600,
+        "height": 900
+      }
+    }
+  }
+]
+```
 
 #### GET /devices/:slug
-- **Ответ:** объект с блоками:
-  - `device`: базовые поля `{ id, slug, brand, model, positioning, principle, safetyNotes }`.
-  - `seo`: SEO-мета.
-  - `hero`: `{ brand, model, positioning, certBadges[], images[] }`, где `certBadges` включают `image` (иконка) и `file` (подтверждающий документ).
-    - `images[]` используют расширенную структуру (`fileId`, `purpose`, `order`, `alt`, `caption`, `url`, `file`).
-  - `galleryImages[]`, `inlineImages[]` — массивы тех же объектов изображений.
-  - `attachments[]`: `{ id, name, description, image? }`.
-  - `indications[]`, `contraindications[]` — строки.
-  - `sideEffects[]`: `{ id, text, rarity }`.
-  - `documents[]`: `{ id, docType, title, issuedBy?, issuedAt?, file: { id, url, mime, originalName, sizeBytes, width?, height? } }`.
-  - `faq[]`: `{ id, question, answer, order }`.
-  - `services[]`: связанные услуги `{ id, slug, name, shortOffer, priceFrom }`.
-- **404:** если slug не найден.
+**Response 200**
+```json
+{
+  "device": {
+    "id": 5,
+    "slug": "ulthera",
+    "brand": "Ulthera",
+    "model": "System",
+    "positioning": "SMAS-лифтинг без хирургии",
+    "principle": "Сфокусированный ультразвук",
+    "safetyNotes": "Процедура выполняется врачом"
+  },
+  "seo": {
+    "metaTitle": "Аппарат Ulthera",
+    "metaDescription": "SMAS-лифтинг",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "Аппарат Ulthera",
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "hero": {
+    "brand": "Ulthera",
+    "model": "System",
+    "positioning": "SMAS-лифтинг без хирургии",
+    "certBadges": [
+      {
+        "id": 30,
+        "type": "FDA",
+        "label": "FDA cleared",
+        "image": {
+          "id": 900,
+          "url": "https://api.octava.local/uploads/fda.png",
+          "originalName": "fda.png",
+          "mime": "image/png",
+          "sizeBytes": 54000,
+          "width": 256,
+          "height": 256
+        },
+        "file": {
+          "id": 901,
+          "url": "https://api.octava.local/uploads/fda.pdf",
+          "originalName": "fda.pdf",
+          "mime": "application/pdf",
+          "sizeBytes": 99000,
+          "width": null,
+          "height": null
+        }
+      }
+    ],
+    "images": [
+      {
+        "id": 1301,
+        "fileId": 810,
+        "purpose": "HERO",
+        "order": 0,
+        "alt": "Аппарат Ulthera",
+        "caption": null,
+        "url": "https://api.octava.local/uploads/ulthera-hero.jpg",
+        "file": {
+          "id": 810,
+          "url": "https://api.octava.local/uploads/ulthera-hero.jpg",
+          "originalName": "ulthera-hero.jpg",
+          "mime": "image/jpeg",
+          "sizeBytes": 310000,
+          "width": 1600,
+          "height": 900
+        }
+      }
+    ]
+  },
+  "galleryImages": [],
+  "inlineImages": [],
+  "attachments": [
+    {
+      "id": 41,
+      "name": "Манипула",
+      "description": "Насадки для тела",
+      "image": {
+        "id": 950,
+        "url": "https://api.octava.local/uploads/ulthera-attachment.jpg",
+        "originalName": "ulthera-attachment.jpg",
+        "mime": "image/jpeg",
+        "sizeBytes": 82000,
+        "width": 900,
+        "height": 600
+      }
+    }
+  ],
+  "indications": ["Лифтинг", "Плотность кожи"],
+  "contraindications": ["Беременность"],
+  "sideEffects": [
+    { "id": 51, "text": "Лёгкая отёчность", "rarity": "RARE" }
+  ],
+  "documents": [
+    {
+      "id": 61,
+      "docType": "CERTIFICATE",
+      "title": "Регистрационное удостоверение",
+      "issuedBy": "Росздравнадзор",
+      "issuedAt": "2023-01-10",
+      "file": {
+        "id": 910,
+        "url": "https://api.octava.local/uploads/ulthera-cert.pdf",
+        "originalName": "ulthera-cert.pdf",
+        "mime": "application/pdf",
+        "sizeBytes": 230000,
+        "width": null,
+        "height": null
+      }
+    }
+  ],
+  "faq": [
+    { "id": 71, "question": "Сколько держится эффект?", "answer": "До 12 месяцев", "order": 0 }
+  ],
+  "services": [
+    {
+      "id": 44,
+      "slug": "smas-lifting",
+      "name": "SMAS-лифтинг",
+      "shortOffer": "Глубокое омоложение",
+      "priceFrom": "19000"
+    }
+  ]
+}
+```
 
 ### 3.4 Публичные страницы
-Каждый маршрут возвращает `{ page: { type, slug }, seo, ... }`. Структуры:
-- **GET /pages/home:** `hero` (заголовок, подзаголовок, CTA и HERO-галерея), `directions` (витрина услуг с вложенными категориями), `subHero` и блок `interior` с описанием и фотогалереей.
-- **GET /pages/about:** `hero` (title/description), `trustItems` (список наград/лицензий с `image` и `file`), `howWeAchieve` текст, `facts[]` (title/text/order), `heroCta` (title/subtitle) если задан.
-- **GET /pages/contacts:** `contacts` объект `{ phone, email, telegramUrl, whatsappUrl, address, yandexMapUrl, workingHours[], metroStations[] }`, где график содержит `label`, `isClosed`, `open`, `close`.
-- **GET /pages/org-info:** `organization` (реквизиты и телефоны), `licenses[]` (с файлами), `documents[]` (тексты с `htmlBody`), `certificates[]` (с файлами).
-- **GET /pages/personal-data-policy** и **GET /pages/privacy-policy:** `policy` `{ title, body }`.
+Каждый маршрут возвращает объект с ключом `page`, SEO-блоком и всеми связанными изображениями. Ниже приведены примерные ответы (поля могут быть `null`, но ключи присутствуют).
+
+#### GET /pages/home
+```json
+{
+  "page": { "type": "HOME", "slug": "home" },
+  "seo": {
+    "metaTitle": "Главная OCTAVA",
+    "metaDescription": "Экспертная косметология",
+    "canonicalUrl": "https://octava.ru",
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "Главная",
+    "ogDescription": "Антивозрастная клиника",
+    "ogImage": null
+  },
+  "hero": {
+    "title": "Экспертная косметология",
+    "subtitle": "Аппаратные и инъекционные методики",
+    "ctaText": "Записаться",
+    "ctaUrl": "/forms/contact",
+    "images": [
+      {
+        "id": 1,
+        "url": "https://api.octava.local/uploads/home-hero.jpg",
+        "alt": "Интерьер",
+        "caption": null,
+        "order": 0
+      }
+    ]
+  },
+  "directions": [
+    {
+      "id": 44,
+      "slug": "smas-lifting",
+      "name": "SMAS-лифтинг",
+      "shortOffer": "Глубокое омоложение",
+      "priceFrom": "19000",
+      "durationMinutes": 90,
+      "benefits": ["Безоперационный"],
+      "ctaText": "Подробнее",
+      "ctaUrl": "/services/smas-lifting",
+      "category": { "id": 12, "slug": "massazh", "name": "Массаж" }
+    }
+  ],
+  "subHero": {
+    "title": "Комплексный подход",
+    "subtitle": "Набор авторских программ"
+  },
+  "interior": {
+    "text": "Фото интерьера",
+    "images": []
+  }
+}
+```
+
+#### GET /pages/about
+```json
+{
+  "page": { "type": "ABOUT", "slug": "about" },
+  "seo": {
+    "metaTitle": "О клинике OCTAVA",
+    "metaDescription": "Почему нам доверяют",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "О клинике",
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "hero": {
+    "title": "OCTAVA — центр экспертной косметологии",
+    "description": "Сочетаем аппаратные и инъекционные методики"
+  },
+  "trustItems": [
+    {
+      "id": 10,
+      "kind": "LICENSE",
+      "title": "Медицинская лицензия",
+      "number": "ЛО-77-01-012345",
+      "issuedAt": "2022-05-01",
+      "issuedBy": "ДЗМ",
+      "image": {
+        "id": 501,
+        "url": "https://api.octava.local/uploads/license.png",
+        "alt": "Лицензия"
+      },
+      "file": {
+        "id": 900,
+        "url": "https://api.octava.local/uploads/license.pdf",
+        "mime": "application/pdf",
+        "name": "license.pdf"
+      }
+    }
+  ],
+  "howWeAchieve": "Работаем по международным протоколам",
+  "facts": [
+    { "id": 1, "title": "15 лет", "text": "Опыт врачей", "order": 0 }
+  ],
+  "heroCta": {
+    "title": "Нужна консультация?",
+    "subtitle": "Оставьте заявку"
+  }
+}
+```
+
+#### GET /pages/contacts
+```json
+{
+  "page": { "type": "CONTACTS", "slug": "contacts" },
+  "seo": {
+    "metaTitle": "Контакты OCTAVA",
+    "metaDescription": "Как нас найти",
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": "Контакты",
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "contacts": {
+    "phone": "+7 (495) 000-00-00",
+    "email": "info@octava.ru",
+    "telegramUrl": "https://t.me/octava",
+    "whatsappUrl": null,
+    "address": "Москва, ул. Примерная, 10",
+    "yandexMapUrl": "https://yandex.ru/map-widget/v1/?um=constructor%3A...",
+    "workingHours": [
+      { "id": 1, "group": "WEEKDAYS", "label": "Пн–Пт", "isClosed": false, "open": "10:00", "close": "21:00" },
+      { "id": 2, "group": "SUNDAY", "label": "Воскресенье", "isClosed": true, "open": null, "close": null }
+    ],
+    "metroStations": [
+      { "id": 5, "name": "Маяковская", "distanceMeters": 400, "line": "Зелёная" }
+    ]
+  }
+}
+```
+
+#### GET /pages/org-info
+```json
+{
+  "page": { "type": "ORG_INFO", "slug": "org-info" },
+  "seo": {
+    "metaTitle": "Документы и лицензии",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "organization": {
+    "fullName": "ООО \"Октава\"",
+    "ogrn": "1234567890123",
+    "inn": "7701234567",
+    "kpp": "770101001",
+    "address": "Москва, ул. Примерная, 10",
+    "email": "info@octava.ru",
+    "phones": [
+      { "type": "PRIMARY", "number": "+7 (495) 000-00-00", "isPrimary": true }
+    ]
+  },
+  "licenses": [
+    {
+      "id": 11,
+      "number": "ЛО-77-01-012345",
+      "issuedAt": "2022-05-01",
+      "issuedBy": "Департамент здравоохранения",
+      "file": {
+        "id": 901,
+        "url": "https://api.octava.local/uploads/license.pdf",
+        "mime": "application/pdf",
+        "name": "license.pdf",
+        "sizeBytes": 180000,
+        "width": null,
+        "height": null
+      }
+    }
+  ],
+  "documents": [
+    {
+      "id": 21,
+      "type": "AGREEMENT",
+      "title": "Договор оказания услуг",
+      "htmlBody": "<p>Текст документа<\/p>",
+      "publishedAt": "2024-02-01"
+    }
+  ],
+  "certificates": [
+    {
+      "id": 31,
+      "title": "Сертификат соответствия",
+      "issuedBy": "Росздравнадзор",
+      "issuedAt": "2023-03-10",
+      "file": null
+    }
+  ]
+}
+```
+
+#### GET /pages/personal-data-policy
+```json
+{
+  "page": { "type": "PERSONAL_DATA_POLICY", "slug": "personal-data-policy" },
+  "seo": {
+    "metaTitle": "Политика обработки персональных данных",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "policy": {
+    "title": "Политика обработки ПДн",
+    "body": "<h1>1. Общие положения<\/h1>..."
+  }
+}
+```
+
+#### GET /pages/privacy-policy
+```json
+{
+  "page": { "type": "PRIVACY_POLICY", "slug": "privacy-policy" },
+  "seo": {
+    "metaTitle": "Политика конфиденциальности",
+    "metaDescription": null,
+    "canonicalUrl": null,
+    "robotsIndex": true,
+    "robotsFollow": true,
+    "ogTitle": null,
+    "ogDescription": null,
+    "ogImage": null
+  },
+  "policy": {
+    "title": "Политика конфиденциальности",
+    "body": "<p>Положения...<\/p>"
+  }
+}
+```
 
 ### 3.5 Публичные данные об организации
-- **GET /org:** расширенная карточка `{ id, fullName, ogrn, inn, kpp, address, email, phones[], licenses[], documents[], certificates[] }`.
-- `licenses[]` и `certificates[]` содержат файлы с метаданными (`file` → `{ id, url, mime, originalName, sizeBytes, width?, height? }`).
-- `documents[]` возвращает тексты (`htmlBody`) и даты публикации.
-- Возвращает 404, если запись не заведена.
+#### GET /org
+```json
+{
+  "id": 1,
+  "fullName": "ООО \"Октава\"",
+  "ogrn": "1234567890123",
+  "inn": "7701234567",
+  "kpp": "770101001",
+  "address": "Москва, ул. Примерная, 10",
+  "email": "info@octava.ru",
+  "phones": [
+    { "type": "PRIMARY", "number": "+7 (495) 000-00-00", "isPrimary": true },
+    { "type": "SECONDARY", "number": "+7 (495) 111-22-33", "isPrimary": false }
+  ],
+  "licenses": [
+    {
+      "id": 11,
+      "number": "ЛО-77-01-012345",
+      "issuedAt": "2022-05-01",
+      "issuedBy": "Департамент здравоохранения",
+      "file": {
+        "id": 901,
+        "url": "https://api.octava.local/uploads/license.pdf",
+        "originalName": "license.pdf",
+        "mime": "application/pdf",
+        "sizeBytes": 180000,
+        "width": null,
+        "height": null
+      }
+    }
+  ],
+  "documents": [
+    {
+      "id": 21,
+      "type": "AGREEMENT",
+      "title": "Договор оказания услуг",
+      "htmlBody": "<p>Текст документа<\/p>",
+      "publishedAt": "2024-02-01"
+    }
+  ],
+  "certificates": [
+    {
+      "id": 31,
+      "title": "Сертификат соответствия",
+      "issuedBy": "Росздравнадзор",
+      "issuedAt": "2023-03-10",
+      "file": {
+        "id": 950,
+        "url": "https://api.octava.local/uploads/certificate.pdf",
+        "originalName": "certificate.pdf",
+        "mime": "application/pdf",
+        "sizeBytes": 220000,
+        "width": null,
+        "height": null
+      }
+    }
+  ]
+}
+```
 
 ### 3.6 Публичные формы (лиды)
 Все формы принимают JSON и возвращают `{ ok: true }` при успехе.
