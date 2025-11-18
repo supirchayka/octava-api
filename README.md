@@ -51,10 +51,12 @@
 
 ### 3.3 Публичный каталог
 #### GET /service-categories
-- **Ответ:** массив категорий `{ id, slug, name, description, servicesCount }`.
+- **Ответ:** массив категорий `{ id, slug, name, description, sortOrder, servicesCount, seo?, heroImage?, galleryImages[] }`.
+- `heroImage` и элементы `galleryImages` включают `fileId`, `purpose`, `order`, `alt`, `caption`, `url` и вложенный `file` `{ id, url, mime, originalName, sizeBytes, width?, height? }`.
 
 #### GET /service-categories/:slug
-- **Ответ:** `{ category: { id, slug, name, description }, seo, services: [...] }`, где каждая услуга содержит `id, slug, name, shortOffer, priceFrom, durationMinutes, benefits[], ctaText, ctaUrl`.
+- **Ответ:** `{ category: { id, slug, name, description, sortOrder, heroImage?, galleryImages[] }, seo, services: [...] }`, где каждая услуга содержит `id, slug, name, shortOffer, priceFrom, durationMinutes, benefits[], ctaText, ctaUrl`.
+- Структура изображений совпадает с ответом списка.
 - **404:** если slug не найден.
 
 #### GET /services/:slug
@@ -62,29 +64,31 @@
   - `service`: `{ id, slug, name, category: { id, slug, name } }`.
   - `seo`: SEO-мета.
   - `hero`: `{ title, shortOffer, priceFrom, durationMinutes, benefits[], ctaText, ctaUrl, images[] }`.
+    - Каждый элемент `images[]` содержит `fileId`, `purpose`, `order`, `alt`, `caption`, `url`, `file`.
   - `about`: `{ whoIsFor, effect, principle, resultsTiming, courseSessions } | null`.
   - `pricesExtended`: массив `{ id, title, price, durationMinutes, type, order }`.
   - `indications[]`, `contraindications[]` — строки.
   - `preparationChecklist[]` и `rehabChecklist[]` — элементы `{ id, text, order }`.
   - `devices`: массив связанных аппаратов `{ id, slug, brand, model, positioning }`.
-  - `galleryImages[]` и `inlineImages[]`: `{ id, url, alt, caption, order }`.
+  - `galleryImages[]` и `inlineImages[]`: `{ id, fileId, purpose, url, alt, caption, order, file }`.
   - `faq[]`: `{ id, question, answer, order }`.
   - `legalDisclaimer`: строка или `null`.
 - **404:** если slug не найден.
 
 #### GET /devices
-- **Ответ:** список аппаратов `{ id, slug, brand, model, positioning }`.
+- **Ответ:** список аппаратов `{ id, slug, brand, model, positioning, heroImage? }`, где `heroImage` описан той же структурой изображений.
 
 #### GET /devices/:slug
 - **Ответ:** объект с блоками:
   - `device`: базовые поля `{ id, slug, brand, model, positioning, principle, safetyNotes }`.
   - `seo`: SEO-мета.
   - `hero`: `{ brand, model, positioning, certBadges[], images[] }`, где `certBadges` включают `image` (иконка) и `file` (подтверждающий документ).
-  - `galleryImages[]`, `inlineImages[]`.
+    - `images[]` используют расширенную структуру (`fileId`, `purpose`, `order`, `alt`, `caption`, `url`, `file`).
+  - `galleryImages[]`, `inlineImages[]` — массивы тех же объектов изображений.
   - `attachments[]`: `{ id, name, description, image? }`.
   - `indications[]`, `contraindications[]` — строки.
   - `sideEffects[]`: `{ id, text, rarity }`.
-  - `documents[]`: `{ id, docType, title, file: { id, url, mime, name } }`.
+  - `documents[]`: `{ id, docType, title, issuedBy?, issuedAt?, file: { id, url, mime, originalName, sizeBytes, width?, height? } }`.
   - `faq[]`: `{ id, question, answer, order }`.
   - `services[]`: связанные услуги `{ id, slug, name, shortOffer, priceFrom }`.
 - **404:** если slug не найден.
@@ -98,7 +102,10 @@
 - **GET /pages/personal-data-policy** и **GET /pages/privacy-policy:** `policy` `{ title, body }`.
 
 ### 3.5 Публичные данные об организации
-- **GET /org:** краткая карточка `{ id, fullName, ogrn, inn, kpp, address, email, phones[] }`. Возвращает 404, если запись не заведена.
+- **GET /org:** расширенная карточка `{ id, fullName, ogrn, inn, kpp, address, email, phones[], licenses[], documents[], certificates[] }`.
+- `licenses[]` и `certificates[]` содержат файлы с метаданными (`file` → `{ id, url, mime, originalName, sizeBytes, width?, height? }`).
+- `documents[]` возвращает тексты (`htmlBody`) и даты публикации.
+- Возвращает 404, если запись не заведена.
 
 ### 3.6 Публичные формы (лиды)
 Все формы принимают JSON и возвращают `{ ok: true }` при успехе.
