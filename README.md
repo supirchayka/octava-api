@@ -478,27 +478,36 @@
 #### GET /pages/home
 ```json
 {
-  "page": { "type": "HOME", "slug": "home" },
+  "page": {
+    "type": "HOME",
+    "slug": ""
+  },
   "seo": {
-    "metaTitle": "Главная OCTAVA",
-    "metaDescription": "Экспертная косметология",
-    "canonicalUrl": "https://octava.ru",
+    "metaTitle": "Клиника OCTAVA — антивозрастная и эстетическая медицина",
+    "metaDescription": "Процедуры, авторские протоколы и современные аппараты. Запись на консультацию в Москве.",
+    "canonicalUrl": null,
     "robotsIndex": true,
     "robotsFollow": true,
-    "ogTitle": "Главная",
-    "ogDescription": "Антивозрастная клиника",
-    "ogImage": null
+    "ogTitle": "OCTAVA",
+    "ogDescription": "Антивозрастная медицина и косметология",
+    "ogImage": {
+      "url": "/uploads/seed/og.jpg",
+      "mime": "image/jpeg",
+      "width": null,
+      "height": null,
+      "alt": "og.jpg"
+    }
   },
   "hero": {
-    "title": "Экспертная косметология",
-    "subtitle": "Аппаратные и инъекционные методики",
-    "ctaText": "Записаться",
-    "ctaUrl": "/forms/contact",
+    "title": "Клиника OCTAVA — молодость и эстетика",
+    "subtitle": "Современные методы антивозрастной медицины и косметологии",
+    "ctaText": "Записаться на консультацию",
+    "ctaUrl": "/contacts",
     "images": [
       {
         "id": 1,
-        "url": "https://api.octava.local/uploads/home-hero.jpg",
-        "alt": "Интерьер",
+        "url": "/uploads/seed/hero-home.jpg",
+        "alt": "Главный баннер клиники OCTAVA",
         "caption": null,
         "order": 0
       }
@@ -506,28 +515,84 @@
   },
   "directions": [
     {
-      "id": 44,
-      "slug": "smas-lifting",
-      "name": "SMAS-лифтинг",
-      "shortOffer": "Глубокое омоложение",
-      "priceFrom": "19000",
-      "durationMinutes": 90,
-      "benefits": ["Безоперационный"],
-      "ctaText": "Подробнее",
-      "ctaUrl": "/services/smas-lifting",
-      "category": { "id": 12, "slug": "massazh", "name": "Массаж" }
+      "id": 1,
+      "slug": "tayskiy-massazh",
+      "name": "Тайский массаж",
+      "shortOffer": "Глубокое расслабление и восстановление тонуса.",
+      "priceFrom": "3000",
+      "durationMinutes": 60,
+      "benefits": [
+        "Улучшение микроциркуляции.",
+        "Снятие мышечных зажимов."
+      ],
+      "ctaText": "Записаться",
+      "ctaUrl": "/contacts",
+      "category": {
+        "id": 1,
+        "slug": "massazh",
+        "name": "Массаж"
+      }
+    },
+    {
+      "id": 2,
+      "slug": "spa-ritual-relax",
+      "name": "SPA-ритуал Relax",
+      "shortOffer": "Расслабляющий уход с акцентом на восстановление ресурса.",
+      "priceFrom": "4500",
+      "durationMinutes": 75,
+      "benefits": [
+        "Снятие эмоционального напряжения.",
+        "Улучшение состояния кожи и общего самочувствия."
+      ],
+      "ctaText": "Записаться",
+      "ctaUrl": "/contacts",
+      "category": {
+        "id": 2,
+        "slug": "spa",
+        "name": "SPA"
+      }
     }
   ],
   "subHero": {
     "title": "Комплексный подход",
-    "subtitle": "Набор авторских программ"
+    "subtitle": "Индивидуальные протоколы, безопасные технологии и забота о каждом пациенте"
   },
   "interior": {
-    "text": "Фото интерьера",
-    "images": []
+    "text": "Интерьер OCTAVA создан для того, чтобы вы чувствовали спокойствие, комфорт и доверие с первых минут визита.",
+    "images": [
+      {
+        "id": 2,
+        "url": "/uploads/seed/gallery-1.jpg",
+        "alt": "Интерьер клиники 1",
+        "caption": null,
+        "order": 1
+      },
+      {
+        "id": 3,
+        "url": "/uploads/seed/gallery-2.jpg",
+        "alt": "Интерьер клиники 2",
+        "caption": null,
+        "order": 2
+      },
+      {
+        "id": 4,
+        "url": "/uploads/seed/gallery-3.jpg",
+        "alt": "Интерьер клиники 3",
+        "caption": null,
+        "order": 3
+      },
+      {
+        "id": 5,
+        "url": "/uploads/seed/gallery-4.jpg",
+        "alt": "Интерьер клиники 4",
+        "caption": null,
+        "order": 4
+      }
+    ]
   }
 }
 ```
+Массив `directions` всегда содержит четыре услуги, выбранные в админке; порядок задаётся в теле PUT-запроса `/admin/pages/home`.
 
 #### GET /pages/about
 ```json
@@ -545,7 +610,15 @@
   },
   "hero": {
     "title": "OCTAVA — центр экспертной косметологии",
-    "description": "Сочетаем аппаратные и инъекционные методики"
+    "description": "Сочетаем аппаратные и инъекционные методики",
+    "image": {
+      "id": 99,
+      "url": "/uploads/seed/about-hero.jpg",
+      "mime": "image/jpeg",
+      "width": 1600,
+      "height": 900,
+      "alt": "Команда клиники"
+    }
   },
   "trustItems": [
     {
@@ -853,17 +926,23 @@
 - Ответ `204 No Content`.
 
 ### 4.2 Админ-страницы
-Все endpoints принимают соответствующие тела и возвращают `204 No Content`.
-- **GET /admin/pages/home:** отдаёт текущий контент главной страницы + SEO, чтобы заполнить форму редактирования.
-- **PUT /admin/pages/home:** поля `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`.
-- **GET /admin/pages/about:** возвращает hero «О клинике», текст «Как мы работаем» и CTA.
-- **PUT /admin/pages/about:** поля `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo`.
-- **GET /admin/pages/contacts:** текущие контакты, адрес, карта и SEO.
-- **PUT /admin/pages/contacts:** `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo`.
-- **GET /admin/pages/personal-data-policy:** заголовок, HTML-тело и SEO политики ПДн.
-- **PUT /admin/pages/personal-data-policy:** `title`, `body`, `seo`.
-- **GET /admin/pages/privacy-policy:** данные политики конфиденциальности.
-- **PUT /admin/pages/privacy-policy:** `title`, `body`, `seo`.
+Каждый PUT возвращает `204 No Content`; GET отдают полный JSON, чтобы заполнить форму.
+
+**/admin/pages/home**
+- GET: `{ heroTitle, heroSubtitle, heroCtaText, heroCtaUrl, subheroTitle, subheroSubtitle, interiorText, heroImages[], interiorImages[], directions[], seo }`. `heroImages` и `interiorImages` содержат `fileId`, `alt`, `caption`, `order` и вложенный `file` (id/path/mime/size) для предпросмотра. `directions` всегда массив из **четырёх** элементов, каждый с `serviceId`, `order` и данными услуги/категории.
+- PUT: все текстовые поля опциональны. `heroImages` — массив максимум из одного объекта `{ fileId, alt?, caption?, order? }`. `interiorImages` — список картинок интерьера. `directions` обязательны и должны включать ровно четыре `{ serviceId, order? }`, иначе запрос отклоняется.
+
+**/admin/pages/about**
+- GET: `{ heroTitle, heroDescription, heroImage, howWeAchieveText, heroCtaTitle, heroCtaSubtitle, facts[], seo }`, где `heroImage` — файл (как в hero), `facts` упорядочены по `order`.
+- PUT: те же текстовые поля + `heroImageFileId` (null очищает) и `facts` — массив `{ title, text, order? }`. Массив пересоздаётся полностью.
+
+**/admin/pages/contacts**
+- GET: `{ phoneMain, email, telegramUrl, whatsappUrl, addressText, yandexMapUrl, workingHours[], metroStations[], seo }`. `workingHours` содержит `id, group, open, close, isClosed`; `metroStations` — `{ id, name, distanceMeters, line }`.
+- PUT: все строки опциональны. `workingHours` — до трёх объектов (WEEKDAYS/SATURDAY/SUNDAY). Для открытых дней нужно передавать `open` и `close` в формате `HH:MM`. `metroStations` — массив `{ name, distanceMeters?, line? }`; массивы пересобираются целиком.
+
+**Политики** (`/admin/pages/personal-data-policy`, `/admin/pages/privacy-policy`)
+- GET: `title`, `body`, `seo`.
+- PUT: опциональные `title`, `body`, `seo`.
 
 ### 4.3 Админ — организация
 - **PUT /admin/org:** тело `{ fullName?, ogrn?, inn?, kpp?, address?, email? }`. Обновляет (или создаёт) единственную запись организации и возвращает её JSON.

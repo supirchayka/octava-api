@@ -1,6 +1,6 @@
 // src/services/admin-pages.service.ts
 import type { FastifyInstance } from 'fastify';
-import { StaticPageType } from '@prisma/client';
+import { DayGroup, ImagePurpose, StaticPageType } from '@prisma/client';
 
 export interface SeoBody {
   metaTitle?: string | null;
@@ -13,6 +13,45 @@ export interface SeoBody {
   ogImageId?: number | null;
 }
 
+export interface FileSummary {
+  id: number;
+  path: string;
+  mime: string;
+  originalName: string;
+  sizeBytes?: number | null;
+}
+
+export interface HomeHeroImageInput {
+  fileId: number;
+  alt?: string | null;
+  caption?: string | null;
+  order?: number | null;
+  file?: FileSummary | null;
+}
+
+export interface HomeInteriorImageInput {
+  fileId: number;
+  alt?: string | null;
+  caption?: string | null;
+  order?: number | null;
+  file?: FileSummary | null;
+}
+
+export interface HomeDirectionInput {
+  serviceId: number;
+  order?: number | null;
+  service?: {
+    id: number;
+    slug: string;
+    name: string;
+    category: {
+      id: number;
+      slug: string;
+      name: string;
+    } | null;
+  } | null;
+}
+
 export interface HomePageBody {
   heroTitle?: string | null;
   heroSubtitle?: string | null;
@@ -21,17 +60,45 @@ export interface HomePageBody {
   subheroTitle?: string | null;
   subheroSubtitle?: string | null;
   interiorText?: string | null;
+  heroImages?: HomeHeroImageInput[];
+  interiorImages?: HomeInteriorImageInput[];
+  directions?: HomeDirectionInput[];
   seo?: SeoBody;
+}
+
+export interface AboutFactInput {
+  id?: number;
+  title?: string | null;
+  text?: string | null;
+  order?: number | null;
 }
 
 export interface AboutPageBody {
   heroTitle?: string | null;
   heroDescription?: string | null;
   howWeAchieveText?: string | null;
-  // hero CTA — отдельная модель AboutHeroCta
+  // hero CTA — отдельная модель AboutHeroCта
   heroCtaTitle?: string | null;
   heroCtaSubtitle?: string | null;
+  heroImageFileId?: number | null;
+  heroImage?: FileSummary | null;
+  facts?: AboutFactInput[];
   seo?: SeoBody;
+}
+
+export interface ContactsWorkingHourInput {
+  id?: number;
+  group: DayGroup;
+  open?: string | null;
+  close?: string | null;
+  isClosed?: boolean;
+}
+
+export interface ContactsMetroStationInput {
+  id?: number;
+  name: string;
+  distanceMeters?: number | null;
+  line?: string | null;
 }
 
 export interface ContactsPageBody {
@@ -41,6 +108,8 @@ export interface ContactsPageBody {
   whatsappUrl?: string | null;
   addressText?: string | null;
   yandexMapUrl?: string | null;
+  workingHours?: ContactsWorkingHourInput[];
+  metroStations?: ContactsMetroStationInput[];
   seo?: SeoBody;
 }
 
@@ -74,6 +143,39 @@ export class AdminPagesService {
       ogDescription: seo.ogDescription,
       ogImageId: seo.ogImageId,
     } as SeoBody;
+  }
+
+  private timeStringToMinutes(value?: string | null) {
+    if (!value) return null;
+    const [hoursStr, minutesStr] = value.split(':');
+    const hours = Number.parseInt(hoursStr, 10);
+    const minutes = Number.parseInt(minutesStr, 10);
+
+    if (
+      Number.isNaN(hours) ||
+      Number.isNaN(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      throw this.app.httpErrors.badRequest(
+        'Время должно быть в формате HH:MM (00-23:00-59)',
+      );
+    }
+
+    return hours * 60 + minutes;
+  }
+
+  private minutesToTimeString(value?: number | null) {
+    if (value == null) return null;
+    const hours = Math.floor(value / 60)
+      .toString()
+      .padStart(2, '0');
+    const minutes = (value % 60)
+      .toString()
+      .padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   /**
@@ -137,7 +239,26 @@ export class AdminPagesService {
     const page = await this.app.prisma.staticPage.findUnique({
       where: { type: StaticPageType.HOME },
       include: {
-        home: true,
+        home: {
+          include: {
+            directions: {
+              orderBy: { order: 'asc' },
+              include: {
+                service: {
+                  include: {
+                    category: true,
+                  },
+                },
+              },
+            },
+            gallery: {
+              orderBy: { order: 'asc' },
+              include: {
+                file: true,
+              },
+            },
+          },
+        },
         seo: true,
       },
     });
@@ -154,54 +275,190 @@ export class AdminPagesService {
       subheroTitle: page.home?.subheroTitle ?? null,
       subheroSubtitle: page.home?.subheroSubtitle ?? null,
       interiorText: page.home?.interiorText ?? null,
+      heroImages:
+        page.home?.gallery
+          .filter((img) => img.purpose === ImagePurpose.HERO)
+          .map((img) => ({
+            id: img.id,
+            fileId: img.fileId,
+            order: img.order,
+            alt: img.alt ?? null,
+            caption: img.caption ?? null,
+            file: img.file
+              ? {
+                  id: img.file.id,
+                  path: img.file.path,
+                  mime: img.file.mime,
+                  originalName: img.file.originalName,
+                  sizeBytes: img.file.sizeBytes,
+                }
+              : null,
+          })) ?? [],
+      interiorImages:
+        page.home?.gallery
+          .filter((img) => img.purpose === ImagePurpose.GALLERY)
+          .map((img) => ({
+            id: img.id,
+            fileId: img.fileId,
+            order: img.order,
+            alt: img.alt ?? null,
+            caption: img.caption ?? null,
+            file: img.file
+              ? {
+                  id: img.file.id,
+                  path: img.file.path,
+                  mime: img.file.mime,
+                  originalName: img.file.originalName,
+                  sizeBytes: img.file.sizeBytes,
+                }
+              : null,
+          })) ?? [],
+      directions:
+        page.home?.directions.map((dir) => ({
+          id: dir.id,
+          serviceId: dir.serviceId,
+          order: dir.order,
+          service: dir.service
+            ? {
+                id: dir.service.id,
+                slug: dir.service.slug,
+                name: dir.service.name,
+                category: dir.service.category
+                  ? {
+                      id: dir.service.category.id,
+                      slug: dir.service.category.slug,
+                      name: dir.service.category.name,
+                    }
+                  : null,
+              }
+            : null,
+        })) ?? [],
       seo: this.mapSeoResponse(page.seo),
     } as HomePageBody;
   }
 
   async updateHomePage(input: HomePageBody) {
     const page = await this.ensureStaticPage(StaticPageType.HOME);
+    await this.app.prisma.$transaction(async (tx) => {
+      await tx.homePage.upsert({
+        where: { id: page.id },
+        update: {
+          ...(input.heroTitle !== undefined && {
+            heroTitle: input.heroTitle ?? '',
+          }),
+          ...(input.heroSubtitle !== undefined && {
+            heroSubtitle: input.heroSubtitle ?? '',
+          }),
+          ...(input.heroCtaText !== undefined && {
+            heroCtaText: input.heroCtaText ?? '',
+          }),
+          ...(input.heroCtaUrl !== undefined && {
+            heroCtaUrl: input.heroCtaUrl ?? '',
+          }),
+          ...(input.subheroTitle !== undefined && {
+            subheroTitle: input.subheroTitle ?? '',
+          }),
+          ...(input.subheroSubtitle !== undefined && {
+            subheroSubtitle: input.subheroSubtitle ?? '',
+          }),
+          ...(input.interiorText !== undefined && {
+            interiorText: input.interiorText ?? '',
+          }),
+        } as any,
+        create: {
+          id: page.id,
+          heroTitle: input.heroTitle ?? 'Клиника OCTAVA — молодость и эстетика',
+          heroSubtitle:
+            input.heroSubtitle ??
+            'Современные методы антивозрастной медицины и косметологии',
+          heroCtaText: input.heroCtaText ?? 'Записаться на консультацию',
+          heroCtaUrl: input.heroCtaUrl ?? '/contacts',
+          subheroTitle: input.subheroTitle ?? 'Комплексный подход',
+          subheroSubtitle:
+            input.subheroSubtitle ??
+            'Индивидуальные протоколы и лучшие аппараты',
+          interiorText:
+            input.interiorText ??
+            'Интерьер и атмосфера клиники создают ощущение уюта и доверия.',
+        },
+      });
 
-    await this.app.prisma.homePage.upsert({
-      where: { id: page.id },
-      update: {
-        ...(input.heroTitle !== undefined && {
-          heroTitle: input.heroTitle ?? '',
-        }),
-        ...(input.heroSubtitle !== undefined && {
-          heroSubtitle: input.heroSubtitle ?? '',
-        }),
-        ...(input.heroCtaText !== undefined && {
-          heroCtaText: input.heroCtaText ?? '',
-        }),
-        ...(input.heroCtaUrl !== undefined && {
-          heroCtaUrl: input.heroCtaUrl ?? '',
-        }),
-        ...(input.subheroTitle !== undefined && {
-          subheroTitle: input.subheroTitle ?? '',
-        }),
-        ...(input.subheroSubtitle !== undefined && {
-          subheroSubtitle: input.subheroSubtitle ?? '',
-        }),
-        ...(input.interiorText !== undefined && {
-          interiorText: input.interiorText ?? '',
-        }),
-      } as any,
-      create: {
-        id: page.id,
-        heroTitle: input.heroTitle ?? 'Клиника OCTAVA — молодость и эстетика',
-        heroSubtitle:
-          input.heroSubtitle ??
-          'Современные методы антивозрастной медицины и косметологии',
-        heroCtaText: input.heroCtaText ?? 'Записаться на консультацию',
-        heroCtaUrl: input.heroCtaUrl ?? '/contacts',
-        subheroTitle: input.subheroTitle ?? 'Комплексный подход',
-        subheroSubtitle:
-          input.subheroSubtitle ??
-          'Индивидуальные протоколы и лучшие аппараты',
-        interiorText:
-          input.interiorText ??
-          'Интерьер и атмосфера клиники создают ощущение уюта и доверия.',
-      },
+      if (input.heroImages !== undefined) {
+        await tx.homeGalleryImage.deleteMany({
+          where: { homePageId: page.id, purpose: ImagePurpose.HERO },
+        });
+        const heroImage = input.heroImages.find((img) => img?.fileId);
+        if (heroImage) {
+          await tx.homeGalleryImage.create({
+            data: {
+              homePageId: page.id,
+              purpose: ImagePurpose.HERO,
+              fileId: heroImage.fileId,
+              order: heroImage.order ?? 0,
+              alt: heroImage.alt ?? null,
+              caption: heroImage.caption ?? null,
+            },
+          });
+        }
+      }
+
+      if (input.interiorImages !== undefined) {
+        await tx.homeGalleryImage.deleteMany({
+          where: { homePageId: page.id, purpose: ImagePurpose.GALLERY },
+        });
+
+        const galleryPayload = input.interiorImages
+          .filter((img): img is HomeInteriorImageInput & { fileId: number } =>
+            Boolean(img && img.fileId),
+          )
+          .map((img, index) => ({
+            homePageId: page.id,
+            purpose: ImagePurpose.GALLERY,
+            fileId: img.fileId,
+            order: img.order ?? index,
+            alt: img.alt ?? null,
+            caption: img.caption ?? null,
+          }));
+
+        if (galleryPayload.length) {
+          await tx.homeGalleryImage.createMany({ data: galleryPayload });
+        }
+      }
+
+      if (input.directions !== undefined) {
+        if (input.directions.length !== 4) {
+          throw this.app.httpErrors.badRequest(
+            'Нужно указать ровно четыре направления на главной странице',
+          );
+        }
+
+        const ids = input.directions.map((d) => d.serviceId);
+        if (ids.some((id) => !id)) {
+          throw this.app.httpErrors.badRequest(
+            'Каждое направление должно ссылаться на услугу',
+          );
+        }
+
+        const uniqueIds = [...new Set(ids)];
+        const services = await tx.service.findMany({
+          where: { id: { in: uniqueIds } },
+          select: { id: true },
+        });
+        if (services.length !== uniqueIds.length) {
+          throw this.app.httpErrors.badRequest('Услуга для направления не найдена');
+        }
+
+        await tx.homeDirection.deleteMany({ where: { homePageId: page.id } });
+        if (ids.length) {
+          await tx.homeDirection.createMany({
+            data: input.directions.map((dir, index) => ({
+              homePageId: page.id,
+              serviceId: dir.serviceId,
+              order: dir.order ?? index,
+            })),
+          });
+        }
+      }
     });
 
     await this.upsertSeo(page.id, input.seo);
@@ -216,6 +473,10 @@ export class AdminPagesService {
         about: {
           include: {
             heroCta: true,
+            heroImage: true,
+            facts: {
+              orderBy: { order: 'asc' },
+            },
           },
         },
         seo: true,
@@ -232,6 +493,20 @@ export class AdminPagesService {
       howWeAchieveText: page.about?.howWeAchieveText ?? null,
       heroCtaTitle: page.about?.heroCta?.title ?? null,
       heroCtaSubtitle: page.about?.heroCta?.subtitle ?? null,
+      heroImage: page.about?.heroImage
+        ? {
+            id: page.about.heroImage.id,
+            path: page.about.heroImage.path,
+            mime: page.about.heroImage.mime,
+            originalName: page.about.heroImage.originalName,
+          }
+        : null,
+      facts: page.about?.facts.map((fact) => ({
+        id: fact.id,
+        title: fact.title,
+        text: fact.text,
+        order: fact.order,
+      })) ?? [],
       seo: this.mapSeoResponse(page.seo),
     } as AboutPageBody;
   }
@@ -251,6 +526,9 @@ export class AdminPagesService {
         ...(input.howWeAchieveText !== undefined && {
           howWeAchieveText: input.howWeAchieveText ?? '',
         }),
+        ...(input.heroImageFileId !== undefined && {
+          heroImageId: input.heroImageFileId,
+        }),
       } as any,
       create: {
         id: page.id,
@@ -261,6 +539,7 @@ export class AdminPagesService {
         howWeAchieveText:
           input.howWeAchieveText ??
           'Подбираем персональные протоколы, используем сертифицированные аппараты и бережные методики.',
+        heroImageId: input.heroImageFileId ?? null,
       },
     });
 
@@ -299,6 +578,25 @@ export class AdminPagesService {
     }
 
     await this.upsertSeo(page.id, input.seo);
+
+    if (input.facts !== undefined) {
+      await this.app.prisma.aboutFact.deleteMany({
+        where: { aboutPageId: page.id },
+      });
+
+      const payload = input.facts
+        .filter((fact) => fact.title && fact.text)
+        .map((fact, index) => ({
+          aboutPageId: page.id,
+          title: fact.title ?? '',
+          text: fact.text ?? '',
+          order: fact.order ?? index,
+        }));
+
+      if (payload.length) {
+        await this.app.prisma.aboutFact.createMany({ data: payload });
+      }
+    }
   }
 
   /* ===================== CONTACTS ===================== */
@@ -307,7 +605,12 @@ export class AdminPagesService {
     const page = await this.app.prisma.staticPage.findUnique({
       where: { type: StaticPageType.CONTACTS },
       include: {
-        contacts: true,
+        contacts: {
+          include: {
+            workingHours: true,
+            metroStations: true,
+          },
+        },
         seo: true,
       },
     });
@@ -323,44 +626,120 @@ export class AdminPagesService {
       whatsappUrl: page.contacts?.whatsappUrl ?? null,
       addressText: page.contacts?.addressText ?? null,
       yandexMapUrl: page.contacts?.yandexMapUrl ?? null,
+      workingHours:
+        page.contacts?.workingHours.map((wh) => ({
+          id: wh.id,
+          group: wh.dayGroup,
+          open: this.minutesToTimeString(wh.openMinutes),
+          close: this.minutesToTimeString(wh.closeMinutes),
+          isClosed: wh.isClosed,
+        })) ?? [],
+      metroStations:
+        page.contacts?.metroStations.map((station) => ({
+          id: station.id,
+          name: station.name,
+          distanceMeters: station.distanceMeters,
+          line: station.line,
+        })) ?? [],
       seo: this.mapSeoResponse(page.seo),
     } as ContactsPageBody;
   }
 
   async updateContactsPage(input: ContactsPageBody) {
     const page = await this.ensureStaticPage(StaticPageType.CONTACTS);
-
-    await this.app.prisma.contactsPage.upsert({
-      where: { id: page.id },
-      update: {
-        ...(input.phoneMain !== undefined && {
+    await this.app.prisma.$transaction(async (tx) => {
+      const contacts = await tx.contactsPage.upsert({
+        where: { id: page.id },
+        update: {
+          ...(input.phoneMain !== undefined && {
+            phoneMain: input.phoneMain ?? '',
+          }),
+          ...(input.email !== undefined && {
+            email: input.email,
+          }),
+          ...(input.telegramUrl !== undefined && {
+            telegramUrl: input.telegramUrl,
+          }),
+          ...(input.whatsappUrl !== undefined && {
+            whatsappUrl: input.whatsappUrl,
+          }),
+          ...(input.addressText !== undefined && {
+            addressText: input.addressText ?? '',
+          }),
+          ...(input.yandexMapUrl !== undefined && {
+            yandexMapUrl: input.yandexMapUrl ?? '',
+          }),
+        } as any,
+        create: {
+          id: page.id,
           phoneMain: input.phoneMain ?? '',
-        }),
-        ...(input.email !== undefined && {
-          email: input.email, // поле nullable в схеме
-        }),
-        ...(input.telegramUrl !== undefined && {
-          telegramUrl: input.telegramUrl,
-        }),
-        ...(input.whatsappUrl !== undefined && {
-          whatsappUrl: input.whatsappUrl,
-        }),
-        ...(input.addressText !== undefined && {
+          email: input.email ?? null,
+          telegramUrl: input.telegramUrl ?? null,
+          whatsappUrl: input.whatsappUrl ?? null,
           addressText: input.addressText ?? '',
-        }),
-        ...(input.yandexMapUrl !== undefined && {
           yandexMapUrl: input.yandexMapUrl ?? '',
-        }),
-      } as any,
-      create: {
-        id: page.id,
-        phoneMain: input.phoneMain ?? '',
-        email: input.email ?? null,
-        telegramUrl: input.telegramUrl ?? null,
-        whatsappUrl: input.whatsappUrl ?? null,
-        addressText: input.addressText ?? '',
-        yandexMapUrl: input.yandexMapUrl ?? '',
-      },
+        },
+      });
+
+      if (input.workingHours !== undefined) {
+        const seen = new Set<DayGroup>();
+        const payload = input.workingHours.map((item) => {
+          if (seen.has(item.group)) {
+            throw this.app.httpErrors.badRequest(
+              'Каждая группа расписания должна встречаться один раз',
+            );
+          }
+          seen.add(item.group);
+
+          const isClosed = item.isClosed ?? false;
+          const openMinutes = isClosed
+            ? null
+            : this.timeStringToMinutes(item.open ?? '');
+          const closeMinutes = isClosed
+            ? null
+            : this.timeStringToMinutes(item.close ?? '');
+
+          if (!isClosed && (openMinutes == null || closeMinutes == null)) {
+            throw this.app.httpErrors.badRequest(
+              'Для открытого дня нужно указать время открытия и закрытия',
+            );
+          }
+
+          return {
+            contactsPageId: contacts.id,
+            dayGroup: item.group,
+            openMinutes,
+            closeMinutes,
+            isClosed,
+          };
+        });
+
+        await tx.contactsWorkingHours.deleteMany({
+          where: { contactsPageId: contacts.id },
+        });
+        if (payload.length) {
+          await tx.contactsWorkingHours.createMany({ data: payload });
+        }
+      }
+
+      if (input.metroStations !== undefined) {
+        await tx.contactsMetroStation.deleteMany({
+          where: { contactsPageId: contacts.id },
+        });
+
+        const metroPayload = input.metroStations
+          .filter((station) => station.name?.trim().length)
+          .map((station) => ({
+            contactsPageId: contacts.id,
+            name: station.name.trim(),
+            distanceMeters: station.distanceMeters ?? null,
+            line: station.line ?? null,
+          }));
+
+        if (metroPayload.length) {
+          await tx.contactsMetroStation.createMany({ data: metroPayload });
+        }
+      }
     });
 
     await this.upsertSeo(page.id, input.seo);

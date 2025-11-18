@@ -430,21 +430,99 @@ Content-Type: application/json
 **GET Response 200**
 ```json
 {
-  "heroTitle": "OCTAVA",
-  "heroSubtitle": "Клиника эстетической медицины",
-  "heroCtaText": "Записаться",
+  "heroTitle": "Клиника OCTAVA — молодость и эстетика",
+  "heroSubtitle": "Современные методы антивозрастной медицины и косметологии",
+  "heroCtaText": "Записаться на консультацию",
   "heroCtaUrl": "/contacts",
   "subheroTitle": "Комплексный подход",
-  "subheroSubtitle": "Аппаратные и инъекционные методики",
-  "interiorText": "Фотографии интерьера",
+  "subheroSubtitle": "Индивидуальные протоколы и лучшие аппараты",
+  "interiorText": "Интерьер OCTAVA создан для ощущения спокойствия и комфорта.",
+  "heroImages": [
+    {
+      "id": 11,
+      "fileId": 501,
+      "order": 0,
+      "alt": "Главный баннер",
+      "caption": null,
+      "file": {
+        "id": 501,
+        "path": "/uploads/seed/hero-home.jpg",
+        "mime": "image/jpeg",
+        "originalName": "hero-home.jpg",
+        "sizeBytes": 325811
+      }
+    }
+  ],
+  "interiorImages": [
+    {
+      "id": 21,
+      "fileId": 610,
+      "order": 1,
+      "alt": "Зал ожидания",
+      "caption": null,
+      "file": {
+        "id": 610,
+        "path": "/uploads/seed/gallery-1.jpg",
+        "mime": "image/jpeg",
+        "originalName": "gallery-1.jpg",
+        "sizeBytes": 220144
+      }
+    }
+  ],
+  "directions": [
+    {
+      "id": 31,
+      "serviceId": 101,
+      "order": 0,
+      "service": {
+        "id": 101,
+        "slug": "tayskiy-massazh",
+        "name": "Тайский массаж",
+        "category": { "id": 1, "slug": "massazh", "name": "Массаж" }
+      }
+    },
+    {
+      "id": 32,
+      "serviceId": 102,
+      "order": 1,
+      "service": {
+        "id": 102,
+        "slug": "spa-ritual-relax",
+        "name": "SPA-ритуал Relax",
+        "category": { "id": 2, "slug": "spa", "name": "SPA" }
+      }
+    },
+    {
+      "id": 33,
+      "serviceId": 103,
+      "order": 2,
+      "service": {
+        "id": 103,
+        "slug": "lifting-ritual",
+        "name": "Лифтинг-ритуал",
+        "category": { "id": 3, "slug": "face", "name": "Лицо" }
+      }
+    },
+    {
+      "id": 34,
+      "serviceId": 104,
+      "order": 3,
+      "service": {
+        "id": 104,
+        "slug": "detox-body",
+        "name": "Detox Body",
+        "category": { "id": 4, "slug": "detox", "name": "Детокс" }
+      }
+    }
+  ],
   "seo": {
-    "metaTitle": "Главная OCTAVA",
-    "metaDescription": "Антивозрастная клиника",
+    "metaTitle": "Клиника OCTAVA — антивозрастная и эстетическая медицина",
+    "metaDescription": "Процедуры, авторские протоколы и современные аппараты.",
     "canonicalUrl": null,
     "robotsIndex": true,
     "robotsFollow": true,
-    "ogTitle": null,
-    "ogDescription": null,
+    "ogTitle": "OCTAVA",
+    "ogDescription": "Антивозрастная медицина и косметология",
     "ogImageId": 345
   }
 }
@@ -459,10 +537,25 @@ Content-Type: application/json
   "heroCtaUrl": "/forms/contact",
   "subheroTitle": "Комплексный подход",
   "subheroSubtitle": "Лучшие аппараты",
-  "interiorText": "Обновили фото",
+  "interiorText": "Обновили описание интерьера",
+  "heroImages": [
+    { "fileId": 777, "alt": "Обложка", "caption": null }
+  ],
+  "interiorImages": [
+    { "fileId": 801, "order": 0 },
+    { "fileId": 802, "order": 1 }
+  ],
+  "directions": [
+    { "serviceId": 201, "order": 0 },
+    { "serviceId": 202, "order": 1 },
+    { "serviceId": 203, "order": 2 },
+    { "serviceId": 204, "order": 3 }
+  ],
   "seo": { "metaTitle": "Главная OCTAVA", "ogImageId": 345 }
 }
 ```
+
+> `directions` обязательно должен содержать четыре услуги. Чтобы очистить HERO, передайте пустой массив `heroImages`.
 
 ### 5.2 `/admin/pages/about`
 **GET Response 200**
@@ -473,6 +566,17 @@ Content-Type: application/json
   "howWeAchieveText": "Работаем по международным протоколам",
   "heroCtaTitle": "Нужна консультация?",
   "heroCtaSubtitle": null,
+  "heroImage": {
+    "id": 901,
+    "path": "/uploads/seed/about-hero.jpg",
+    "mime": "image/jpeg",
+    "originalName": "about-hero.jpg",
+    "sizeBytes": 482113
+  },
+  "facts": [
+    { "id": 1, "title": "15 лет", "text": "Опыт врачей", "order": 0 },
+    { "id": 2, "title": "> 12000", "text": "Проведённых процедур", "order": 1 }
+  ],
   "seo": {
     "metaTitle": "О клинике OCTAVA",
     "metaDescription": "Почему нам доверяют",
@@ -486,7 +590,24 @@ Content-Type: application/json
 }
 ```
 
-**PUT Body (пример)** — те же поля, любые могут быть опущены. `null` очищает значение CTA.
+**PUT Body (пример)**
+```json
+{
+  "heroTitle": "OCTAVA",
+  "heroDescription": "Новые формулировки",
+  "heroImageFileId": 933,
+  "howWeAchieveText": "Обновили блок доверия",
+  "heroCtaTitle": "Оставить заявку",
+  "heroCtaSubtitle": "Перезвоним за 5 минут",
+  "facts": [
+    { "title": "20+", "text": "Авторских протоколов", "order": 0 },
+    { "title": "5", "text": "Кабинетов", "order": 1 }
+  ],
+  "seo": { "metaTitle": "О нас", "ogImageId": 4002 }
+}
+```
+
+`heroImageFileId: null` очищает изображение, пустой массив `facts` удаляет все факты.
 
 ### 5.3 `/admin/pages/contacts`
 **GET Response 200**
@@ -498,6 +619,14 @@ Content-Type: application/json
   "whatsappUrl": null,
   "addressText": "Москва, ул. Примерная, 10",
   "yandexMapUrl": "https://yandex.ru/map-widget/v1/?um=constructor%3A...",
+  "workingHours": [
+    { "id": 1, "group": "WEEKDAYS", "open": "10:00", "close": "21:00", "isClosed": false },
+    { "id": 2, "group": "SATURDAY", "open": "11:00", "close": "18:00", "isClosed": false },
+    { "id": 3, "group": "SUNDAY", "open": null, "close": null, "isClosed": true }
+  ],
+  "metroStations": [
+    { "id": 5, "name": "Маяковская", "distanceMeters": 400, "line": "Зелёная" }
+  ],
   "seo": {
     "metaTitle": "Контакты OCTAVA",
     "metaDescription": "Как нас найти",
@@ -519,10 +648,21 @@ Content-Type: application/json
   "telegramUrl": "https://t.me/octava",
   "whatsappUrl": "https://wa.me/79990000000",
   "addressText": "Москва, ул. Примерная, 10",
-  "yandexMapUrl": "https://yandex.ru/maps/...",
-  "seo": { "metaTitle": "Контакты OCTAVA" }
+  "yandexMapUrl": "https://yandex.ru/map-widget/v1/?um=constructor%3A...",
+  "workingHours": [
+    { "group": "WEEKDAYS", "open": "10:00", "close": "21:00", "isClosed": false },
+    { "group": "SATURDAY", "open": "11:00", "close": "18:00", "isClosed": false },
+    { "group": "SUNDAY", "isClosed": true }
+  ],
+  "metroStations": [
+    { "name": "Маяковская", "distanceMeters": 400, "line": "Зелёная" },
+    { "name": "Белорусская", "distanceMeters": 850, "line": "Кольцевая" }
+  ],
+  "seo": { "metaTitle": "Контакты OCTAVA", "ogImageId": 350 }
 }
 ```
+
+`workingHours` и `metroStations` пересоздаются при каждом PUT — отправляйте полный набор значений.
 
 ### 5.4 `/admin/pages/personal-data-policy`
 **GET Response 200**

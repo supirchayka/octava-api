@@ -177,6 +177,7 @@ model File {
   deviceAttachments     DeviceAttachment[] @relation("DeviceAttachmentImage")
   deviceDocuments       DeviceDocument[]   @relation("DeviceDocumentFile")
   deviceImages          DeviceImage[]      @relation("DeviceImageFile")
+  aboutHeroImages       AboutPage[]        @relation("AboutHeroImage")
 }
 
 /**
@@ -313,6 +314,9 @@ model AboutPage {
   heroTitle        String
   heroDescription  String
   howWeAchieveText String
+
+  heroImageId Int?
+  heroImage   File? @relation("AboutHeroImage", fields: [heroImageId], references: [id], onDelete: SetNull)
 
   trustItems AboutTrustItem[]
   facts      AboutFact[]

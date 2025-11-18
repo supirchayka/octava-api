@@ -329,27 +329,72 @@
 **GET Response 200**
 ```json
 {
-  "heroTitle": "OCTAVA",
-  "heroSubtitle": "Клиника эстетической медицины",
-  "heroCtaText": "Записаться",
+  "heroTitle": "Клиника OCTAVA — молодость и эстетика",
+  "heroSubtitle": "Современные методы антивозрастной медицины и косметологии",
+  "heroCtaText": "Записаться на консультацию",
   "heroCtaUrl": "/contacts",
   "subheroTitle": "Комплексный подход",
-  "subheroSubtitle": "Аппаратные и инъекционные методики",
-  "interiorText": "Фотографии интерьера",
+  "subheroSubtitle": "Индивидуальные протоколы и лучшие аппараты",
+  "interiorText": "Интерьер OCTAVA создан для ощущения спокойствия и комфорта.",
+  "heroImages": [
+    {
+      "id": 11,
+      "fileId": 501,
+      "order": 0,
+      "alt": "Главный баннер",
+      "caption": null,
+      "file": {
+        "id": 501,
+        "path": "/uploads/seed/hero-home.jpg",
+        "mime": "image/jpeg",
+        "originalName": "hero-home.jpg",
+        "sizeBytes": 325811
+      }
+    }
+  ],
+  "interiorImages": [
+    {
+      "id": 21,
+      "fileId": 610,
+      "order": 1,
+      "alt": "Зал ожидания",
+      "caption": null,
+      "file": {
+        "id": 610,
+        "path": "/uploads/seed/gallery-1.jpg",
+        "mime": "image/jpeg",
+        "originalName": "gallery-1.jpg",
+        "sizeBytes": 220144
+      }
+    }
+  ],
+  "directions": [
+    {
+      "id": 31,
+      "serviceId": 101,
+      "order": 0,
+      "service": {
+        "id": 101,
+        "slug": "tayskiy-massazh",
+        "name": "Тайский массаж",
+        "category": { "id": 1, "slug": "massazh", "name": "Массаж" }
+      }
+    }
+  ],
   "seo": {
-    "metaTitle": "Главная OCTAVA",
-    "metaDescription": "Антивозрастная клиника",
+    "metaTitle": "Клиника OCTAVA — антивозрастная и эстетическая медицина",
+    "metaDescription": "Процедуры, авторские протоколы и современные аппараты.",
     "canonicalUrl": null,
     "robotsIndex": true,
     "robotsFollow": true,
-    "ogTitle": null,
-    "ogDescription": null,
+    "ogTitle": "OCTAVA",
+    "ogDescription": "Антивозрастная медицина и косметология",
     "ogImageId": 345
   }
 }
 ```
 
-**PUT Body** — `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`. Любой переданный ключ допускает значение `null` для очистки.
+**PUT Body** — опциональные `heroTitle`, `heroSubtitle`, `heroCtaText`, `heroCtaUrl`, `subheroTitle`, `subheroSubtitle`, `interiorText`, `seo`, а также массивы `heroImages` (одно изображение HERO), `interiorImages` (галерея) и `directions` (ровно четыре объекта `{ serviceId, order? }`).
 
 ### `/admin/pages/about`
 
@@ -361,6 +406,16 @@
   "howWeAchieveText": "Работаем по международным протоколам",
   "heroCtaTitle": "Нужна консультация?",
   "heroCtaSubtitle": null,
+  "heroImage": {
+    "id": 901,
+    "path": "/uploads/seed/about-hero.jpg",
+    "mime": "image/jpeg",
+    "originalName": "about-hero.jpg",
+    "sizeBytes": 482113
+  },
+  "facts": [
+    { "id": 1, "title": "15 лет", "text": "Опыт врачей", "order": 0 }
+  ],
   "seo": {
     "metaTitle": "О клинике OCTAVA",
     "metaDescription": "Почему нам доверяют",
@@ -374,7 +429,7 @@
 }
 ```
 
-**PUT Body** — `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `seo`.
+**PUT Body** — `heroTitle`, `heroDescription`, `howWeAchieveText`, `heroCtaTitle`, `heroCtaSubtitle`, `heroImageFileId`, `facts` (массив `{ title, text, order? }`), `seo`.
 
 ### `/admin/pages/contacts`
 
@@ -386,7 +441,15 @@
   "telegramUrl": "https://t.me/octava",
   "whatsappUrl": null,
   "addressText": "Москва, ул. Пример, 10",
-  "yandexMapUrl": "https://yandex.ru/maps/...",
+  "yandexMapUrl": "https://yandex.ru/map-widget/v1/?um=constructor%3A...",
+  "workingHours": [
+    { "id": 1, "group": "WEEKDAYS", "open": "10:00", "close": "21:00", "isClosed": false },
+    { "id": 2, "group": "SATURDAY", "open": "11:00", "close": "18:00", "isClosed": false },
+    { "id": 3, "group": "SUNDAY", "open": null, "close": null, "isClosed": true }
+  ],
+  "metroStations": [
+    { "id": 5, "name": "Маяковская", "distanceMeters": 400, "line": "Зелёная" }
+  ],
   "seo": {
     "metaTitle": "Контакты OCTAVA",
     "metaDescription": "Как нас найти",
@@ -400,7 +463,7 @@
 }
 ```
 
-**PUT Body** — `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `seo`.
+**PUT Body** — `phoneMain`, `email`, `telegramUrl`, `whatsappUrl`, `addressText`, `yandexMapUrl`, `workingHours` (массив уникальных `DayGroup` с `open/close` в `HH:MM`), `metroStations` (массив `{ name, distanceMeters?, line? }`), `seo`.
 
 ### `/admin/pages/personal-data-policy`
 
