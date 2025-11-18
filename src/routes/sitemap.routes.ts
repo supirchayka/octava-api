@@ -6,11 +6,9 @@ export default async function sitemapRoutes(app: FastifyInstance) {
 
     const [categories, services, devices] = await Promise.all([
       app.prisma.serviceCategory.findMany({
-        where: { isPublished: true },
         select: { slug: true },
       }),
       app.prisma.service.findMany({
-        where: { isPublished: true },
         include: {
           category: {
             select: { slug: true },
@@ -18,7 +16,6 @@ export default async function sitemapRoutes(app: FastifyInstance) {
         },
       }),
       app.prisma.device.findMany({
-        where: { isPublished: true },
         select: { slug: true },
       }),
     ]);
