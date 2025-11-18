@@ -170,6 +170,7 @@ export class PagesService {
               orderBy: { order: "asc" },
             },
             heroCta: true,
+            heroImage: true,
           },
         },
         seo: {
@@ -229,6 +230,16 @@ export class PagesService {
       hero: {
         title: page.about.heroTitle,
         description: page.about.heroDescription,
+        image: page.about.heroImage
+          ? {
+              id: page.about.heroImage.id,
+              url: buildFileUrl(page.about.heroImage.path),
+              mime: page.about.heroImage.mime,
+              width: page.about.heroImage.width,
+              height: page.about.heroImage.height,
+              alt: page.about.heroImage.originalName,
+            }
+          : null,
       },
       trustItems: trust,
       howWeAchieve: page.about.howWeAchieveText,

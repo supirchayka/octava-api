@@ -20,6 +20,12 @@ export class AdminOrgController {
     }
   }
 
+  getOrg = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const org = await this.service.getOrganization();
+    return reply.send(org);
+  };
+
   upsertOrg = async (request: FastifyRequest, reply: FastifyReply) => {
     this.ensureEditor(request);
     const body = request.body as OrgBody;
