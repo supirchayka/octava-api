@@ -6,6 +6,14 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
   const controller = new AdminPagesController(app);
 
   // HOME
+  app.get(
+    '/admin/pages/home',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getHome,
+  );
+
   app.put(
     '/admin/pages/home',
     {
@@ -42,6 +50,14 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
   );
 
   // ABOUT
+  app.get(
+    '/admin/pages/about',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getAbout,
+  );
+
   app.put(
     '/admin/pages/about',
     {
@@ -76,6 +92,14 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
   );
 
   // CONTACTS
+  app.get(
+    '/admin/pages/contacts',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getContacts,
+  );
+
   app.put(
     '/admin/pages/contacts',
     {
@@ -111,6 +135,14 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
   );
 
   // PERSONAL DATA POLICY
+  app.get(
+    '/admin/pages/personal-data-policy',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getPersonalDataPolicy,
+  );
+
   app.put(
     '/admin/pages/personal-data-policy',
     {
@@ -142,6 +174,14 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
   );
 
   // PRIVACY POLICY
+  app.get(
+    '/admin/pages/privacy-policy',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getPrivacyPolicy,
+  );
+
   app.put(
     '/admin/pages/privacy-policy',
     {

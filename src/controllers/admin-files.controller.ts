@@ -20,19 +20,57 @@ export class AdminFilesController {
     }
   }
 
+  private async readRawBody(request: FastifyRequest) {
+    const chunks: Buffer[] = [];
+
+    for await (const chunk of request.raw) {
+      if (!chunk) continue;
+      const normalized =
+        typeof chunk === 'string'
+          ? Buffer.from(chunk)
+          : Buffer.isBuffer(chunk)
+            ? chunk
+            : Buffer.from(chunk);
+      chunks.push(normalized);
+    }
+
+    return Buffer.concat(chunks);
+  }
+
   upload = async (request: FastifyRequest, reply: FastifyReply) => {
     this.ensureEditor(request);
 
-    // метод .file() добавляется fastify-multipart
-    const mpFile = await (request as any).file();
+    const maybeMultipart = request as FastifyRequest & {
+      isMultipart?: () => boolean;
+      file?: () => Promise<any>;
+    };
 
-    if (!mpFile) {
+    const isMultipart = maybeMultipart.isMultipart?.();
+
+    if (isMultipart) {
+      const mpFile = await maybeMultipart.file?.();
+
+      if (!mpFile) {
+        throw this.app.httpErrors.badRequest('Файл не передан');
+      }
+
+      const created = await this.service.saveMultipartFile(mpFile);
+      return reply.code(201).send(created);
+    }
+
+    const buffer = await this.readRawBody(request);
+    if (!buffer.length) {
       throw this.app.httpErrors.badRequest('Файл не передан');
     }
 
-    const created = await this.service.saveFile(mpFile);
+    const filenameHeader = request.headers['x-filename'];
+    const created = await this.service.saveBufferFile(buffer, {
+      filenameHeader: Array.isArray(filenameHeader)
+        ? filenameHeader[0]
+        : filenameHeader,
+      contentTypeHeader: request.headers['content-type'],
+    });
 
-    // Можно просто вернуть запись File — фронт сам построит URL из path
     return reply.code(201).send(created);
   };
 }

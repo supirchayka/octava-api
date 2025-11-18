@@ -5,6 +5,15 @@ import { AdminOrgController } from '../controllers/admin-org.controller';
 export default async function adminOrgRoutes(app: FastifyInstance) {
   const controller = new AdminOrgController(app);
 
+  // Текущая карточка организации
+  app.get(
+    '/admin/org',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getOrg,
+  );
+
   // Обновление/создание карточки организации
   app.put(
     '/admin/org',
