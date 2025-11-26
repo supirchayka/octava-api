@@ -75,6 +75,7 @@ export class PagesService {
                 file: true,
               },
             },
+            subheroImage: true,
           },
         },
         seo: {
@@ -144,6 +145,16 @@ export class PagesService {
       subHero: {
         title: page.home.subheroTitle,
         subtitle: page.home.subheroSubtitle,
+        image: page.home.subheroImage
+          ? {
+              id: page.home.subheroImage.id,
+              url: buildFileUrl(page.home.subheroImage.path),
+              mime: page.home.subheroImage.mime,
+              width: page.home.subheroImage.width,
+              height: page.home.subheroImage.height,
+              alt: page.home.subheroImage.originalName,
+            }
+          : null,
       },
       interior: {
         text: page.home.interiorText,

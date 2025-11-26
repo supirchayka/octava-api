@@ -555,7 +555,15 @@
   ],
   "subHero": {
     "title": "Комплексный подход",
-    "subtitle": "Индивидуальные протоколы, безопасные технологии и забота о каждом пациенте"
+    "subtitle": "Индивидуальные протоколы, безопасные технологии и забота о каждом пациенте",
+    "image": {
+      "id": 6,
+      "url": "/uploads/seed/subhero-home.jpg",
+      "mime": "image/jpeg",
+      "width": null,
+      "height": null,
+      "alt": "Команда клиники"
+    }
   },
   "interior": {
     "text": "Интерьер OCTAVA создан для того, чтобы вы чувствовали спокойствие, комфорт и доверие с первых минут визита.",
@@ -929,8 +937,8 @@
 Каждый PUT возвращает `204 No Content`; GET отдают полный JSON, чтобы заполнить форму.
 
 **/admin/pages/home**
-- GET: `{ heroTitle, heroSubtitle, heroCtaText, heroCtaUrl, subheroTitle, subheroSubtitle, interiorText, heroImages[], interiorImages[], directions[], seo }`. `heroImages` и `interiorImages` содержат `fileId`, `alt`, `caption`, `order` и вложенный `file` (id/path/mime/size) для предпросмотра. `directions` всегда массив из **четырёх** элементов, каждый с `serviceId`, `order` и данными услуги/категории.
-- PUT: все текстовые поля опциональны. `heroImages` — массив максимум из одного объекта `{ fileId, alt?, caption?, order? }`. `interiorImages` — список картинок интерьера. `directions` обязательны и должны включать ровно четыре `{ serviceId, order? }`, иначе запрос отклоняется.
+- GET: `{ heroTitle, heroSubtitle, heroCtaText, heroCtaUrl, subheroTitle, subheroSubtitle, subheroImage, interiorText, heroImages[], interiorImages[], directions[], seo }`. `heroImages` и `interiorImages` содержат `fileId`, `alt`, `caption`, `order` и вложенный `file` (id/path/mime/size) для предпросмотра. `subheroImage` — вложенный файл (если выбран). `directions` всегда массив из **четырёх** элементов, каждый с `serviceId`, `order` и данными услуги/категории.
+- PUT: все текстовые поля опциональны. `subheroImageFileId` обновляет/очищает картинку подгероя. `heroImages` — массив максимум из одного объекта `{ fileId, alt?, caption?, order? }`. `interiorImages` — список картинок интерьера. `directions` обязательны и должны включать ровно четыре `{ serviceId, order? }`, иначе запрос отклоняется.
 
 **/admin/pages/about**
 - GET: `{ heroTitle, heroDescription, heroImage, howWeAchieveText, heroCtaTitle, heroCtaSubtitle, facts[], seo }`, где `heroImage` — файл (как в hero), `facts` упорядочены по `order`.
