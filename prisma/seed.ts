@@ -42,6 +42,7 @@ async function seedFilesPlaceholders() {
   // Плейсхолдеры картинок
   const paths = [
     'uploads/seed/hero-home.jpg',
+    'uploads/seed/subhero-home.jpg',
     'uploads/seed/gallery-1.jpg',
     'uploads/seed/gallery-2.jpg',
     'uploads/seed/gallery-3.jpg',
@@ -68,8 +69,9 @@ async function seedFilesPlaceholders() {
 
   return {
     heroHomeId: result[0],
-    galleryIds: result.slice(1, 5),
-    ogId: result[5],
+    subheroHomeId: result[1],
+    galleryIds: result.slice(2, 6),
+    ogId: result[6],
   };
 }
 
@@ -105,6 +107,7 @@ async function seedOrganization() {
 
 async function seedStaticPages(files: {
   heroHomeId: number;
+  subheroHomeId: number;
   galleryIds: number[];
   ogId: number;
 }) {
@@ -147,6 +150,7 @@ async function seedStaticPages(files: {
       subheroTitle: 'Комплексный подход',
       subheroSubtitle:
         'Индивидуальные протоколы, безопасные технологии и забота о каждом пациенте',
+      subheroImageId: files.subheroHomeId,
       interiorText:
         'Интерьер OCTAVA создан для того, чтобы вы чувствовали спокойствие, комфорт и доверие с первых минут визита.',
     },
@@ -160,6 +164,7 @@ async function seedStaticPages(files: {
       subheroTitle: 'Комплексный подход',
       subheroSubtitle:
         'Индивидуальные протоколы, безопасные технологии и забота о каждом пациенте',
+      subheroImageId: files.subheroHomeId,
       interiorText:
         'Интерьер OCTAVA создан для того, чтобы вы чувствовали спокойствие, комфорт и доверие с первых минут визита.',
     },

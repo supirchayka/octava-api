@@ -335,6 +335,13 @@
   "heroCtaUrl": "/contacts",
   "subheroTitle": "Комплексный подход",
   "subheroSubtitle": "Индивидуальные протоколы и лучшие аппараты",
+  "subheroImage": {
+    "id": 12,
+    "path": "/uploads/seed/subhero-home.jpg",
+    "mime": "image/jpeg",
+    "originalName": "subhero-home.jpg",
+    "sizeBytes": 240100
+  },
   "interiorText": "Интерьер OCTAVA создан для ощущения спокойствия и комфорта.",
   "heroImages": [
     {

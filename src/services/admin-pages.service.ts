@@ -59,6 +59,8 @@ export interface HomePageBody {
   heroCtaUrl?: string | null;
   subheroTitle?: string | null;
   subheroSubtitle?: string | null;
+  subheroImageFileId?: number | null;
+  subheroImage?: FileSummary | null;
   interiorText?: string | null;
   heroImages?: HomeHeroImageInput[];
   interiorImages?: HomeInteriorImageInput[];
@@ -257,6 +259,7 @@ export class AdminPagesService {
                 file: true,
               },
             },
+            subheroImage: true,
           },
         },
         seo: true,
@@ -274,6 +277,15 @@ export class AdminPagesService {
       heroCtaUrl: page.home?.heroCtaUrl ?? null,
       subheroTitle: page.home?.subheroTitle ?? null,
       subheroSubtitle: page.home?.subheroSubtitle ?? null,
+      subheroImage: page.home?.subheroImage
+        ? {
+            id: page.home.subheroImage.id,
+            path: page.home.subheroImage.path,
+            mime: page.home.subheroImage.mime,
+            originalName: page.home.subheroImage.originalName,
+            sizeBytes: page.home.subheroImage.sizeBytes,
+          }
+        : null,
       interiorText: page.home?.interiorText ?? null,
       heroImages:
         page.home?.gallery
@@ -361,6 +373,9 @@ export class AdminPagesService {
           ...(input.subheroSubtitle !== undefined && {
             subheroSubtitle: input.subheroSubtitle ?? '',
           }),
+          ...(input.subheroImageFileId !== undefined && {
+            subheroImageId: input.subheroImageFileId,
+          }),
           ...(input.interiorText !== undefined && {
             interiorText: input.interiorText ?? '',
           }),
@@ -377,6 +392,7 @@ export class AdminPagesService {
           subheroSubtitle:
             input.subheroSubtitle ??
             'Индивидуальные протоколы и лучшие аппараты',
+          subheroImageId: input.subheroImageFileId ?? null,
           interiorText:
             input.interiorText ??
             'Интерьер и атмосфера клиники создают ощущение уюта и доверия.',

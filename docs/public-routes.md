@@ -26,7 +26,7 @@
         "category": { "id": number, "slug": string, "name": string }
       }
     ],
-    "subHero": { "title": string | null, "subtitle": string | null },
+    "subHero": { "title": string | null, "subtitle": string | null, "image": FileMeta | null },
     "interior": { "text": string | null, "images": GalleryImage[] }
   }
   ```

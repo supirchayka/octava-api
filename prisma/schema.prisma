@@ -178,6 +178,7 @@ model File {
   deviceDocuments       DeviceDocument[]   @relation("DeviceDocumentFile")
   deviceImages          DeviceImage[]      @relation("DeviceImageFile")
   aboutHeroImages       AboutPage[]        @relation("AboutHeroImage")
+  homeSubheroImages    HomePage[]         @relation("HomeSubheroImage")
 }
 
 /**
@@ -271,6 +272,9 @@ model HomePage {
 
   subheroTitle    String
   subheroSubtitle String
+
+  subheroImageId Int?
+  subheroImage   File? @relation("HomeSubheroImage", fields: [subheroImageId], references: [id], onDelete: SetNull)
 
   interiorText String
 
