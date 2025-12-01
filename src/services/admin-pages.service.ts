@@ -388,6 +388,11 @@ export class AdminPagesService {
       nestedSubheroImage?.file?.id ??
       null;
 
+    const hasSubheroImageInput =
+      input.subheroImageFileId !== undefined ||
+      input.subheroImage !== undefined ||
+      nestedSubheroImage !== undefined;
+
     await this.app.prisma.$transaction(async (tx) => {
       await tx.homePage.upsert({
         where: { id: page.id },
@@ -410,8 +415,7 @@ export class AdminPagesService {
           ...(input.subheroSubtitle !== undefined && {
             subheroSubtitle: input.subheroSubtitle ?? '',
           }),
-          ...((input.subheroImageFileId !== undefined ||
-            input.subheroImage !== undefined) && {
+          ...(hasSubheroImageInput && {
             subheroImageId,
           }),
           ...(input.interiorText !== undefined && {
