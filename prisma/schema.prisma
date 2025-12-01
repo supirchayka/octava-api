@@ -287,8 +287,8 @@ model HomeDirection {
   homePageId Int
   homePage   HomePage @relation(fields: [homePageId], references: [id], onDelete: Cascade)
 
-  serviceId Int
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  categoryId Int
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   order Int
 
@@ -498,9 +498,10 @@ model ServiceCategory {
   sortOrder   Int      @default(0)
   updatedAt   DateTime @updatedAt
 
-  services Service[]
-  images   CategoryImage[]
-  seo      SeoCategory?
+  services       Service[]
+  images         CategoryImage[]
+  seo            SeoCategory?
+  homeDirections HomeDirection[]
 }
 
 model CategoryImage {
@@ -549,8 +550,6 @@ model Service {
   devices           ServiceDevice[]
   images            ServiceImage[]
   seo               SeoService?
-
-  homeDirections HomeDirection[] // back from HomeDirection
   leads          Lead[]          @relation("LeadService")
 
   @@index([categoryId])

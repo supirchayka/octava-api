@@ -708,7 +708,7 @@ async function seedCatalog(files: { ogId: number }) {
     where: { type: StaticPageType.HOME },
   });
 
-  const services = await prisma.service.findMany({
+  const categories = await prisma.serviceCategory.findMany({
     orderBy: { id: 'asc' },
     take: 4,
   });
@@ -717,11 +717,11 @@ async function seedCatalog(files: { ogId: number }) {
     where: { homePageId: home.id },
   });
 
-  for (let i = 0; i < services.length; i++) {
+  for (let i = 0; i < categories.length; i++) {
     await prisma.homeDirection.create({
       data: {
         homePageId: home.id,
-        serviceId: services[i].id,
+        categoryId: categories[i].id,
         order: i + 1,
       },
     });
