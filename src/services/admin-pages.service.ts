@@ -39,17 +39,13 @@ export interface HomeInteriorImageInput {
 }
 
 export interface HomeDirectionInput {
-  serviceId: number;
+  categoryId: number;
   order?: number | null;
-  service?: {
+  category?: {
     id: number;
     slug: string;
     name: string;
-    category: {
-      id: number;
-      slug: string;
-      name: string;
-    } | null;
+    description?: string | null;
   } | null;
 }
 
@@ -277,11 +273,7 @@ export class AdminPagesService {
             directions: {
               orderBy: { order: 'asc' },
               include: {
-                service: {
-                  include: {
-                    category: true,
-                  },
-                },
+                category: true,
               },
             },
             gallery: {
@@ -368,20 +360,14 @@ export class AdminPagesService {
       directions:
         page.home?.directions.map((dir) => ({
           id: dir.id,
-          serviceId: dir.serviceId,
+          categoryId: dir.categoryId,
           order: dir.order,
-          service: dir.service
+          category: dir.category
             ? {
-                id: dir.service.id,
-                slug: dir.service.slug,
-                name: dir.service.name,
-                category: dir.service.category
-                  ? {
-                      id: dir.service.category.id,
-                      slug: dir.service.category.slug,
-                      name: dir.service.category.name,
-                    }
-                  : null,
+                id: dir.category.id,
+                slug: dir.category.slug,
+                name: dir.category.name,
+                description: dir.category.description,
               }
             : null,
         })) ?? [],
@@ -504,20 +490,20 @@ export class AdminPagesService {
           );
         }
 
-        const ids = input.directions.map((d) => d.serviceId);
+        const ids = input.directions.map((d) => d.categoryId);
         if (ids.some((id) => !id)) {
           throw this.app.httpErrors.badRequest(
-            'Каждое направление должно ссылаться на услугу',
+            'Каждое направление должно ссылаться на категорию',
           );
         }
 
         const uniqueIds = [...new Set(ids)];
-        const services = await tx.service.findMany({
+        const categories = await tx.serviceCategory.findMany({
           where: { id: { in: uniqueIds } },
           select: { id: true },
         });
-        if (services.length !== uniqueIds.length) {
-          throw this.app.httpErrors.badRequest('Услуга для направления не найдена');
+        if (categories.length !== uniqueIds.length) {
+          throw this.app.httpErrors.badRequest('Категория для направления не найдена');
         }
 
         await tx.homeDirection.deleteMany({ where: { homePageId: page.id } });
@@ -525,7 +511,7 @@ export class AdminPagesService {
           await tx.homeDirection.createMany({
             data: input.directions.map((dir, index) => ({
               homePageId: page.id,
-              serviceId: dir.serviceId,
+              categoryId: dir.categoryId,
               order: dir.order ?? index,
             })),
           });
