@@ -1,16 +1,63 @@
 // prisma/seed.ts
 import 'dotenv/config';
+import fs from 'node:fs';
+import path from 'node:path';
+
 import {
   DayGroup,
+  FileKind,
+  ImagePurpose,
   PrismaClient,
   Role,
   ServicePriceType,
   StaticPageType,
   PhoneType,
+  Storage,
 } from '@prisma/client';
 import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
+
+const SEED_DIR = path.join(process.cwd(), 'uploads/seed');
+
+function ensureSeedImage(
+  filename: string,
+  base64Content: string,
+  meta: { mime: string; width: number; height: number },
+) {
+  fs.mkdirSync(SEED_DIR, { recursive: true });
+  const filePath = path.join(SEED_DIR, filename);
+
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, Buffer.from(base64Content, 'base64'));
+  }
+
+  const stats = fs.statSync(filePath);
+  const dbPath = `uploads/seed/${filename}`;
+
+  return prisma.file.upsert({
+    where: { path: dbPath },
+    update: {
+      originalName: filename,
+      mime: meta.mime,
+      sizeBytes: stats.size,
+      width: meta.width,
+      height: meta.height,
+      storage: Storage.LOCAL,
+      kind: FileKind.IMAGE,
+    },
+    create: {
+      originalName: filename,
+      path: dbPath,
+      mime: meta.mime,
+      sizeBytes: stats.size,
+      width: meta.width,
+      height: meta.height,
+      storage: Storage.LOCAL,
+      kind: FileKind.IMAGE,
+    },
+  });
+}
 
 async function ensureAdmin() {
   const email = process.env.ADMIN_EMAIL || 'admin@octava.ru';
@@ -100,6 +147,16 @@ async function seedStaticPages() {
     where: { type: StaticPageType.HOME },
   });
 
+  const homeHeroImage = await ensureSeedImage(
+    'home-hero.png',
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
+    {
+      mime: 'image/png',
+      width: 1,
+      height: 1,
+    },
+  );
+
   await prisma.homePage.upsert({
     where: { id: home.id },
     update: {
@@ -126,6 +183,50 @@ async function seedStaticPages() {
         'Мы подбираем решения под задачи пациента: от диагностики до комплексного сопровождения и реабилитации.',
       interiorText:
         'В OCTAVA пациенты чувствуют себя комфортно: мы внимательно объясняем каждый шаг и сопровождаем на всём пути лечения.',
+    },
+  });
+
+  await prisma.homeGalleryImage.deleteMany({
+    where: { homePageId: home.id, purpose: ImagePurpose.HERO },
+  });
+
+  await prisma.homeGalleryImage.create({
+    data: {
+      homePageId: home.id,
+      purpose: ImagePurpose.HERO,
+      fileId: homeHeroImage.id,
+      alt: 'Клиника OCTAVA — главный баннер',
+      caption: 'Герой и OG для главной страницы',
+      order: 0,
+    },
+  });
+
+  await prisma.seoStaticPage.upsert({
+    where: { pageId: home.id },
+    update: {
+      metaTitle: 'Клиника OCTAVA — антивозрастная и эстетическая медицина',
+      metaDescription:
+        'Главная страница клиники OCTAVA: персональные программы, консультации и современный подход к эстетике.',
+      canonicalUrl: '/',
+      robotsIndex: true,
+      robotsFollow: true,
+      ogTitle: 'OCTAVA — молодость и эстетика',
+      ogDescription:
+        'Клиника антивозрастной и эстетической медицины в Москве. Индивидуальные программы и современные аппараты.',
+      ogImageId: homeHeroImage.id,
+    },
+    create: {
+      pageId: home.id,
+      metaTitle: 'Клиника OCTAVA — антивозрастная и эстетическая медицина',
+      metaDescription:
+        'Главная страница клиники OCTAVA: персональные программы, консультации и современный подход к эстетике.',
+      canonicalUrl: '/',
+      robotsIndex: true,
+      robotsFollow: true,
+      ogTitle: 'OCTAVA — молодость и эстетика',
+      ogDescription:
+        'Клиника антивозрастной и эстетической медицины в Москве. Индивидуальные программы и современные аппараты.',
+      ogImageId: homeHeroImage.id,
     },
   });
 

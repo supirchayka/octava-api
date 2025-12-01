@@ -377,6 +377,7 @@ export class AdminPagesService {
 
   async updateHomePage(input: HomePageBody) {
     const page = await this.ensureStaticPage(StaticPageType.HOME);
+    const heroBlock = (input as any)?.hero ?? {};
     const nestedSubheroImage = (input as any)?.subHero?.image;
     const subheroImageId =
       input.subheroImageFileId ??
@@ -393,21 +394,30 @@ export class AdminPagesService {
       input.subheroImage !== undefined ||
       nestedSubheroImage !== undefined;
 
+    const heroTitle = input.heroTitle ?? heroBlock.title;
+    const heroSubtitle = input.heroSubtitle ?? heroBlock.subtitle;
+    const heroCtaText = input.heroCtaText ?? heroBlock.ctaText;
+    const heroCtaUrl =
+      input.heroCtaUrl ?? heroBlock.ctaUrl ?? heroBlock.cta?.url ?? null;
+
+    const heroImagesInput =
+      input.heroImages ?? heroBlock.images ?? heroBlock.heroImages;
+
     await this.app.prisma.$transaction(async (tx) => {
       await tx.homePage.upsert({
         where: { id: page.id },
         update: {
-          ...(input.heroTitle !== undefined && {
-            heroTitle: input.heroTitle ?? '',
+          ...(heroTitle !== undefined && {
+            heroTitle: heroTitle ?? '',
           }),
-          ...(input.heroSubtitle !== undefined && {
-            heroSubtitle: input.heroSubtitle ?? '',
+          ...(heroSubtitle !== undefined && {
+            heroSubtitle: heroSubtitle ?? '',
           }),
-          ...(input.heroCtaText !== undefined && {
-            heroCtaText: input.heroCtaText ?? '',
+          ...(heroCtaText !== undefined && {
+            heroCtaText: heroCtaText ?? '',
           }),
-          ...(input.heroCtaUrl !== undefined && {
-            heroCtaUrl: input.heroCtaUrl ?? '',
+          ...(heroCtaUrl !== undefined && {
+            heroCtaUrl: heroCtaUrl ?? '',
           }),
           ...(input.subheroTitle !== undefined && {
             subheroTitle: input.subheroTitle ?? '',
@@ -424,12 +434,13 @@ export class AdminPagesService {
         } as any,
         create: {
           id: page.id,
-          heroTitle: input.heroTitle ?? 'Клиника OCTAVA — молодость и эстетика',
+          heroTitle:
+            heroTitle ?? 'Клиника OCTAVA — молодость и эстетика',
           heroSubtitle:
-            input.heroSubtitle ??
+            heroSubtitle ??
             'Современные методы антивозрастной медицины и косметологии',
-          heroCtaText: input.heroCtaText ?? 'Записаться на консультацию',
-          heroCtaUrl: input.heroCtaUrl ?? '/contacts',
+          heroCtaText: heroCtaText ?? 'Записаться на консультацию',
+          heroCtaUrl: heroCtaUrl ?? '/contacts',
           subheroTitle: input.subheroTitle ?? 'Комплексный подход',
           subheroSubtitle:
             input.subheroSubtitle ??
@@ -441,11 +452,11 @@ export class AdminPagesService {
         },
       });
 
-      if (input.heroImages !== undefined) {
+      if (heroImagesInput !== undefined) {
         await tx.homeGalleryImage.deleteMany({
           where: { homePageId: page.id, purpose: ImagePurpose.HERO },
         });
-        const heroImage = input.heroImages.find((img) => img?.fileId);
+        const heroImage = heroImagesInput.find((img: any) => img?.fileId);
         if (heroImage) {
           await tx.homeGalleryImage.create({
             data: {
@@ -519,7 +530,20 @@ export class AdminPagesService {
       }
     });
 
-    await this.upsertSeo(page.id, input.seo);
+    const heroImageForSeo = heroImagesInput?.find((img: any) => img?.fileId);
+    let seoPayload = (input as any)?.seo ?? input.seo;
+
+    if (heroImageForSeo?.fileId) {
+      if (seoPayload) {
+        if (seoPayload.ogImageId === undefined) {
+          seoPayload = { ...seoPayload, ogImageId: heroImageForSeo.fileId };
+        }
+      } else {
+        seoPayload = { ogImageId: heroImageForSeo.fileId } as SeoBody;
+      }
+    }
+
+    await this.upsertSeo(page.id, seoPayload);
   }
 
   /* ===================== ABOUT ===================== */
