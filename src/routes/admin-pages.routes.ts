@@ -77,10 +77,10 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
               items: {
                 type: 'object',
                 properties: {
-                  serviceId: { type: 'integer' },
+                  categoryId: { type: 'integer' },
                   order: { type: 'integer' },
                 },
-                required: ['serviceId'],
+                required: ['categoryId'],
               },
             },
             seo: {

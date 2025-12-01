@@ -62,14 +62,10 @@ export class PagesService {
             directions: {
               orderBy: { order: "asc" },
               include: {
-                service: {
+                category: {
                   include: {
-                    category: {
-                      include: {
-                        images: {
-                          include: { file: true },
-                        },
-                      },
+                    images: {
+                      include: { file: true },
                     },
                   },
                 },
@@ -96,7 +92,7 @@ export class PagesService {
 
     const directions = page.home.directions
       .map((d) => {
-        const category = d.service?.category;
+        const category = d.category;
         if (!category) return null;
 
         const heroImage = category.images?.find(
