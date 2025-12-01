@@ -1,7 +1,7 @@
 // src/services/admin-pages.service.ts
 import type { FastifyInstance } from 'fastify';
 import { DayGroup, ImagePurpose, StaticPageType } from '@prisma/client';
-import { buildFileUrl } from '../utils/files';
+import { buildFileUrl, isSeedFilePath } from '../utils/files';
 
 export interface SeoBody {
   metaTitle?: string | null;
@@ -301,29 +301,43 @@ export class AdminPagesService {
       throw this.app.httpErrors.notFound('Страница HOME не найдена');
     }
 
-    const heroImages: AdminHomeHeroImage[] =
-      page.home?.gallery
-        .filter((img) => img.purpose === ImagePurpose.HERO)
-        .map((img) => ({
-          id: img.id,
-          fileId: img.fileId,
-          url: img.file ? buildFileUrl(img.file.path) : '',
-          alt: img.alt ?? img.file?.originalName ?? null,
-          caption: img.caption ?? null,
-          order: img.order,
-        })) ?? [];
+    const heroImagesSource =
+      page.home?.gallery.filter((img) => img.purpose === ImagePurpose.HERO) ??
+      [];
+    const hasNonSeedHero = heroImagesSource.some(
+      (img) => img.file && !isSeedFilePath(img.file.path),
+    );
 
-    const interiorImages: AdminHomeHeroImage[] =
-      page.home?.gallery
-        .filter((img) => img.purpose === ImagePurpose.GALLERY)
-        .map((img) => ({
-          id: img.id,
-          fileId: img.fileId,
-          url: img.file ? buildFileUrl(img.file.path) : '',
-          alt: img.alt ?? img.file?.originalName ?? null,
-          caption: img.caption ?? null,
-          order: img.order,
-        })) ?? [];
+    const heroImages: AdminHomeHeroImage[] = heroImagesSource
+      .filter((img) => (hasNonSeedHero ? !isSeedFilePath(img.file?.path) : true))
+      .map((img) => ({
+        id: img.id,
+        fileId: img.fileId,
+        url: img.file ? buildFileUrl(img.file.path) : '',
+        alt: img.alt ?? img.file?.originalName ?? null,
+        caption: img.caption ?? null,
+        order: img.order,
+      }));
+
+    const interiorImagesSource =
+      page.home?.gallery.filter((img) => img.purpose === ImagePurpose.GALLERY) ??
+      [];
+    const hasNonSeedInterior = interiorImagesSource.some(
+      (img) => img.file && !isSeedFilePath(img.file.path),
+    );
+
+    const interiorImages: AdminHomeHeroImage[] = interiorImagesSource
+      .filter((img) =>
+        hasNonSeedInterior ? !isSeedFilePath(img.file?.path) : true,
+      )
+      .map((img) => ({
+        id: img.id,
+        fileId: img.fileId,
+        url: img.file ? buildFileUrl(img.file.path) : '',
+        alt: img.alt ?? img.file?.originalName ?? null,
+        caption: img.caption ?? null,
+        order: img.order,
+      }));
 
     return {
       hero: {

@@ -17,3 +17,13 @@ export function buildFileUrl(filePath: string): string {
 
   return `/uploads/${normalized}`;
 }
+
+/**
+ * Проверяем, относится ли путь к seed-файлам, чтобы можно было скрывать
+ * заглушки, когда в базе появились реальные загрузки.
+ */
+export function isSeedFilePath(filePath?: string | null): boolean {
+  if (!filePath) return false;
+  const normalized = filePath.replace(/^\/+/, '');
+  return normalized.startsWith('uploads/seed/') || normalized.startsWith('seed/');
+}
