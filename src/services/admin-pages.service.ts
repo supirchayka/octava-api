@@ -1,6 +1,7 @@
 // src/services/admin-pages.service.ts
 import type { FastifyInstance } from 'fastify';
 import { DayGroup, ImagePurpose, StaticPageType } from '@prisma/client';
+import { buildFileUrl } from '../utils/files';
 
 export interface SeoBody {
   metaTitle?: string | null;
@@ -66,6 +67,36 @@ export interface HomePageBody {
   interiorImages?: HomeInteriorImageInput[];
   directions?: HomeDirectionInput[];
   seo?: SeoBody;
+}
+
+interface AdminHomeHeroImage {
+  id: number;
+  fileId: number;
+  url: string;
+  alt: string | null;
+  caption: string | null;
+  order: number | null;
+}
+
+interface AdminHomeResponse {
+  hero: {
+    title: string | null;
+    subtitle: string | null;
+    ctaText: string | null;
+    ctaUrl: string | null;
+    images: AdminHomeHeroImage[];
+  };
+  subHero: {
+    title: string | null;
+    subtitle: string | null;
+    image: (FileSummary & { url: string }) | null;
+  };
+  interior: {
+    text: string | null;
+    images: AdminHomeHeroImage[];
+  };
+  directions: HomeDirectionInput[];
+  seo: SeoBody | null;
 }
 
 export interface AboutFactInput {
@@ -237,7 +268,7 @@ export class AdminPagesService {
 
   /* ===================== HOME ===================== */
 
-  async getHomePage() {
+  async getHomePage(): Promise<AdminHomeResponse> {
     const page = await this.app.prisma.staticPage.findUnique({
       where: { type: StaticPageType.HOME },
       include: {
@@ -270,61 +301,56 @@ export class AdminPagesService {
       throw this.app.httpErrors.notFound('Страница HOME не найдена');
     }
 
+    const heroImages: AdminHomeHeroImage[] =
+      page.home?.gallery
+        .filter((img) => img.purpose === ImagePurpose.HERO)
+        .map((img) => ({
+          id: img.id,
+          fileId: img.fileId,
+          url: img.file ? buildFileUrl(img.file.path) : '',
+          alt: img.alt ?? img.file?.originalName ?? null,
+          caption: img.caption ?? null,
+          order: img.order,
+        })) ?? [];
+
+    const interiorImages: AdminHomeHeroImage[] =
+      page.home?.gallery
+        .filter((img) => img.purpose === ImagePurpose.GALLERY)
+        .map((img) => ({
+          id: img.id,
+          fileId: img.fileId,
+          url: img.file ? buildFileUrl(img.file.path) : '',
+          alt: img.alt ?? img.file?.originalName ?? null,
+          caption: img.caption ?? null,
+          order: img.order,
+        })) ?? [];
+
     return {
-      heroTitle: page.home?.heroTitle ?? null,
-      heroSubtitle: page.home?.heroSubtitle ?? null,
-      heroCtaText: page.home?.heroCtaText ?? null,
-      heroCtaUrl: page.home?.heroCtaUrl ?? null,
-      subheroTitle: page.home?.subheroTitle ?? null,
-      subheroSubtitle: page.home?.subheroSubtitle ?? null,
-      subheroImage: page.home?.subheroImage
-        ? {
-            id: page.home.subheroImage.id,
-            path: page.home.subheroImage.path,
-            mime: page.home.subheroImage.mime,
-            originalName: page.home.subheroImage.originalName,
-            sizeBytes: page.home.subheroImage.sizeBytes,
-          }
-        : null,
-      interiorText: page.home?.interiorText ?? null,
-      heroImages:
-        page.home?.gallery
-          .filter((img) => img.purpose === ImagePurpose.HERO)
-          .map((img) => ({
-            id: img.id,
-            fileId: img.fileId,
-            order: img.order,
-            alt: img.alt ?? null,
-            caption: img.caption ?? null,
-            file: img.file
-              ? {
-                  id: img.file.id,
-                  path: img.file.path,
-                  mime: img.file.mime,
-                  originalName: img.file.originalName,
-                  sizeBytes: img.file.sizeBytes,
-                }
-              : null,
-          })) ?? [],
-      interiorImages:
-        page.home?.gallery
-          .filter((img) => img.purpose === ImagePurpose.GALLERY)
-          .map((img) => ({
-            id: img.id,
-            fileId: img.fileId,
-            order: img.order,
-            alt: img.alt ?? null,
-            caption: img.caption ?? null,
-            file: img.file
-              ? {
-                  id: img.file.id,
-                  path: img.file.path,
-                  mime: img.file.mime,
-                  originalName: img.file.originalName,
-                  sizeBytes: img.file.sizeBytes,
-                }
-              : null,
-          })) ?? [],
+      hero: {
+        title: page.home?.heroTitle ?? null,
+        subtitle: page.home?.heroSubtitle ?? null,
+        ctaText: page.home?.heroCtaText ?? null,
+        ctaUrl: page.home?.heroCtaUrl ?? null,
+        images: heroImages,
+      },
+      subHero: {
+        title: page.home?.subheroTitle ?? null,
+        subtitle: page.home?.subheroSubtitle ?? null,
+        image: page.home?.subheroImage
+          ? {
+              id: page.home.subheroImage.id,
+              path: page.home.subheroImage.path,
+              mime: page.home.subheroImage.mime,
+              originalName: page.home.subheroImage.originalName,
+              sizeBytes: page.home.subheroImage.sizeBytes,
+              url: buildFileUrl(page.home.subheroImage.path),
+            }
+          : null,
+      },
+      interior: {
+        text: page.home?.interiorText ?? null,
+        images: interiorImages,
+      },
       directions:
         page.home?.directions.map((dir) => ({
           id: dir.id,
@@ -346,7 +372,7 @@ export class AdminPagesService {
             : null,
         })) ?? [],
       seo: this.mapSeoResponse(page.seo),
-    } as HomePageBody;
+    };
   }
 
   async updateHomePage(input: HomePageBody) {
