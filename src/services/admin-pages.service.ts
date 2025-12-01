@@ -351,6 +351,13 @@ export class AdminPagesService {
 
   async updateHomePage(input: HomePageBody) {
     const page = await this.ensureStaticPage(StaticPageType.HOME);
+    const subheroImageId =
+      input.subheroImageFileId ??
+      (input.subheroImage as any)?.fileId ??
+      input.subheroImage?.id ??
+      (input.subheroImage as any)?.file?.id ??
+      null;
+
     await this.app.prisma.$transaction(async (tx) => {
       await tx.homePage.upsert({
         where: { id: page.id },
@@ -373,8 +380,9 @@ export class AdminPagesService {
           ...(input.subheroSubtitle !== undefined && {
             subheroSubtitle: input.subheroSubtitle ?? '',
           }),
-          ...(input.subheroImageFileId !== undefined && {
-            subheroImageId: input.subheroImageFileId,
+          ...((input.subheroImageFileId !== undefined ||
+            input.subheroImage !== undefined) && {
+            subheroImageId,
           }),
           ...(input.interiorText !== undefined && {
             interiorText: input.interiorText ?? '',
@@ -392,7 +400,7 @@ export class AdminPagesService {
           subheroSubtitle:
             input.subheroSubtitle ??
             'Индивидуальные протоколы и лучшие аппараты',
-          subheroImageId: input.subheroImageFileId ?? null,
+          subheroImageId,
           interiorText:
             input.interiorText ??
             'Интерьер и атмосфера клиники создают ощущение уюта и доверия.',

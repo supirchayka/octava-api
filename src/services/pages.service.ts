@@ -64,7 +64,13 @@ export class PagesService {
               include: {
                 service: {
                   include: {
-                    category: true,
+                    category: {
+                      include: {
+                        images: {
+                          include: { file: true },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -88,25 +94,34 @@ export class PagesService {
 
     if (!page || !page.home) return null;
 
-    const directions = page.home.directions.map((d) => {
-      const s = d.service;
-      return {
-        id: s.id,
-        slug: s.slug,
-        name: s.name,
-        shortOffer: s.shortOffer,
-        priceFrom: s.priceFrom?.toString() ?? null,
-        durationMinutes: s.durationMinutes,
-        benefits: [s.benefit1, s.benefit2].filter(Boolean),
-        ctaText: s.ctaText,
-        ctaUrl: s.ctaUrl,
-        category: {
-          id: s.category.id,
-          slug: s.category.slug,
-          name: s.category.name,
-        },
-      };
-    });
+    const directions = page.home.directions
+      .map((d) => {
+        const category = d.service?.category;
+        if (!category) return null;
+
+        const heroImage = category.images?.find(
+          (img: any) => img.purpose === ImagePurpose.HERO,
+        );
+
+        return {
+          id: category.id,
+          slug: category.slug,
+          name: category.name,
+          description: category.description,
+          heroImage:
+            heroImage && heroImage.file
+              ? {
+                  id: heroImage.id,
+                  url: buildFileUrl(heroImage.file.path),
+                  mime: heroImage.file.mime,
+                  width: heroImage.file.width,
+                  height: heroImage.file.height,
+                  alt: heroImage.alt ?? heroImage.file.originalName,
+                }
+              : null,
+        };
+      })
+      .filter(Boolean);
 
     const heroImages = page.home.gallery
       .filter((g) => g.purpose === ImagePurpose.HERO)
