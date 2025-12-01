@@ -352,7 +352,10 @@ export class AdminPagesService {
   async updateHomePage(input: HomePageBody) {
     const page = await this.ensureStaticPage(StaticPageType.HOME);
     const subheroImageId =
-      input.subheroImageFileId ?? input.subheroImage?.id ?? null;
+      input.subheroImageFileId ??
+      input.subheroImage?.id ??
+      (input.subheroImage as any)?.file?.id ??
+      null;
 
     await this.app.prisma.$transaction(async (tx) => {
       await tx.homePage.upsert({
