@@ -30,6 +30,19 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
             subheroTitle: { type: 'string' },
             subheroSubtitle: { type: 'string' },
             subheroImageFileId: { type: 'integer' },
+            subheroImage: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                fileId: { type: 'integer' },
+                file: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                  },
+                },
+              },
+            },
             interiorText: { type: 'string' },
             heroImages: {
               type: 'array',
