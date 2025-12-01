@@ -1,7 +1,7 @@
 // src/services/pages.service.ts
 import type { FastifyInstance } from "fastify";
 import { StaticPageType, DayGroup, ImagePurpose } from "@prisma/client";
-import { buildFileUrl } from "../utils/files";
+import { buildFileUrl, isSeedFilePath } from "../utils/files";
 
 export class PagesService {
   constructor(private app: FastifyInstance) {}
@@ -123,8 +123,15 @@ export class PagesService {
       })
       .filter(Boolean);
 
-    const heroImages = page.home.gallery
-      .filter((g) => g.purpose === ImagePurpose.HERO)
+    const heroImagesSource = page.home.gallery.filter(
+      (g) => g.purpose === ImagePurpose.HERO,
+    );
+    const hasNonSeedHero = heroImagesSource.some(
+      (g) => g.file && !isSeedFilePath(g.file.path),
+    );
+
+    const heroImages = heroImagesSource
+      .filter((g) => (hasNonSeedHero ? !isSeedFilePath(g.file?.path) : true))
       .map((g) => ({
         id: g.id,
         url: buildFileUrl(g.file.path),
@@ -133,8 +140,17 @@ export class PagesService {
         order: g.order,
       }));
 
-    const interiorImages = page.home.gallery
-      .filter((g) => g.purpose === ImagePurpose.GALLERY)
+    const interiorImagesSource = page.home.gallery.filter(
+      (g) => g.purpose === ImagePurpose.GALLERY,
+    );
+    const hasNonSeedInterior = interiorImagesSource.some(
+      (g) => g.file && !isSeedFilePath(g.file.path),
+    );
+
+    const interiorImages = interiorImagesSource
+      .filter((g) =>
+        hasNonSeedInterior ? !isSeedFilePath(g.file?.path) : true,
+      )
       .map((g) => ({
         id: g.id,
         url: buildFileUrl(g.file.path),
