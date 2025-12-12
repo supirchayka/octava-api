@@ -1636,11 +1636,11 @@ async function seedDevices() {
 }
 
 async function main() {
-  await ensureAdmin();
-  await seedOrganization();
-  await seedStaticPages();
+  //await ensureAdmin();
+  //await seedOrganization();
+  //await seedStaticPages();
   await seedDevices();
-  await seedCatalog();
+  //await seedCatalog();
 
   console.log('✅ Seed completed');
 }
