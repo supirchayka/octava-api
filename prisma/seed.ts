@@ -8,6 +8,8 @@ import {
   FileKind,
   ImagePurpose,
   PrismaClient,
+  DeviceCertType,
+  Rarity,
   Role,
   ServicePriceType,
   StaticPageType,
@@ -19,6 +21,8 @@ import { hashPassword } from '../src/utils/password';
 const prisma = new PrismaClient();
 
 const SEED_DIR = path.join(process.cwd(), 'uploads/seed');
+const ONE_PIXEL_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=';
+const DEFAULT_IMAGE_META = { mime: 'image/png', width: 1600, height: 900 } as const;
 
 function ensureSeedImage(
   filename: string,
@@ -393,6 +397,33 @@ type ServiceSeed = {
   preparation: string[];
   rehab: string[];
   faq: Array<{ question: string; answer: string }>;
+};
+
+type DeviceImageSeed = {
+  filename: string;
+  purpose: ImagePurpose;
+  alt?: string;
+  caption?: string;
+  order?: number;
+};
+
+type DeviceSeed = {
+  brand: string;
+  model: string;
+  slug: string;
+  positioning?: string;
+  principle?: string;
+  safetyNotes?: string;
+  heroImage?: DeviceImageSeed;
+  galleryImages?: DeviceImageSeed[];
+  inlineImages?: DeviceImageSeed[];
+  certBadges?: Array<{ type: DeviceCertType; label: string; image?: DeviceImageSeed }>;
+  attachments?: Array<{ name: string; description?: string; image?: DeviceImageSeed }>;
+  indications?: string[];
+  contraindications?: string[];
+  sideEffects?: Array<{ text: string; rarity: Rarity }>;
+  faq?: Array<{ question: string; answer: string; order?: number }>;
+  seo?: { metaTitle?: string | null; metaDescription?: string | null };
 };
 
 async function seedCatalog() {
@@ -1220,10 +1251,395 @@ async function seedCatalog() {
   }
 }
 
+async function seedDevices() {
+  const devices: DeviceSeed[] = [
+    {
+      brand: 'Ultraformer',
+      model: 'III',
+      slug: 'ultraformer-iii',
+      positioning: 'SMAS-лифтинг и ремоделирование овала лица',
+      principle: 'Сфокусированный ультразвук (HIFU)',
+      safetyNotes: 'Работает только сертифицированный врач с подбором картриджей по зонам.',
+      heroImage: {
+        filename: 'device-ultraformer-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Аппарат Ultraformer III для SMAS-лифтинга',
+      },
+      galleryImages: [
+        {
+          filename: 'device-ultraformer-handle.png',
+          purpose: ImagePurpose.GALLERY,
+          caption: 'Рукоятки с картриджами разной глубины',
+        },
+        {
+          filename: 'device-ultraformer-panel.png',
+          purpose: ImagePurpose.GALLERY,
+          caption: 'Панель управления с визуализацией линий',
+          order: 2,
+        },
+      ],
+      certBadges: [
+        { type: DeviceCertType.CE, label: 'CE Medical Device' },
+        { type: DeviceCertType.ROSZDRAV, label: 'Регистрация Росздравнадзора' },
+      ],
+      attachments: [
+        { name: 'Лифтинговая насадка 4.5 мм', description: 'Для работы по SMAS' },
+        { name: 'Картридж 1.5 мм', description: 'Деликатные зоны и глазная область' },
+      ],
+      indications: ['Птоз мягких тканей', 'Нечёткий овал лица', 'Снижение плотности кожи'],
+      contraindications: ['Импланты в зоне воздействия', 'Беременность', 'Активные воспаления кожи'],
+      sideEffects: [
+        { text: 'Лёгкая чувствительность при надавливании 1–3 дня', rarity: Rarity.COMMON },
+        { text: 'Преходящая отёчность', rarity: Rarity.UNCOMMON },
+      ],
+      faq: [
+        {
+          question: 'Когда виден итоговый лифтинг?',
+          answer: 'Коллагеновое ремоделирование занимает 6–12 недель, первые улучшения заметны уже через месяц.',
+        },
+        {
+          question: 'Сколько линий требуется?',
+          answer: 'Подбираем индивидуально, в среднем 400–800 линий на лицо и шею.',
+          order: 2,
+        },
+      ],
+      seo: {
+        metaTitle: 'Ultraformer III — SMAS-лифтинг в OCTAVA',
+        metaDescription: 'Сфокусированный ультразвук для чёткого овала лица и лифтинга без реабилитации.',
+      },
+    },
+    {
+      brand: 'InMode',
+      model: 'Morpheus8 Body',
+      slug: 'morpheus8-body',
+      positioning: 'Фракционный RF-микроигольчатый лифтинг для плотности кожи',
+      principle: 'Комбинированная радиочастота и микроиглы до 8 мм',
+      safetyNotes: 'Используются стерильные одноразовые картриджи; требуется аппликационная анестезия.',
+      heroImage: {
+        filename: 'device-morpheus-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Манипула Morpheus8 Body',
+      },
+      galleryImages: [
+        {
+          filename: 'device-morpheus-panel.png',
+          purpose: ImagePurpose.GALLERY,
+          caption: 'Панель с контролем глубины прогрева',
+        },
+      ],
+      attachments: [
+        { name: 'Насадка 24 pin', description: 'Коррекция постакне и пор' },
+        { name: 'Body-tip 7 pin', description: 'Укрепление кожи живота и рук' },
+      ],
+      indications: ['Растяжки и постакне', 'Снижение тургора кожи тела', 'Профилактика возрастных изменений'],
+      contraindications: ['Беременность и лактация', 'Имплантированные кардиостимуляторы'],
+      sideEffects: [
+        { text: 'Покраснение и ощущение жара до суток', rarity: Rarity.COMMON },
+        { text: 'Корочки в местах проколов', rarity: Rarity.UNCOMMON },
+      ],
+      faq: [
+        {
+          question: 'Нужна ли подготовка?',
+          answer: 'Достаточно исключить активные загары и агрессивные пилинги за 2 недели.',
+        },
+      ],
+      seo: {
+        metaTitle: 'Morpheus8 Body — RF-микроигольчатое омоложение',
+        metaDescription: 'Укрепление кожи тела и лица за счёт фракционного прогрева на глубину до 8 мм.',
+      },
+    },
+    {
+      brand: 'Lumenis',
+      model: 'M22 IPL',
+      slug: 'lumenis-m22',
+      positioning: 'Фотолечение пигментации и сосудистых проявлений',
+      principle: 'Импульсный свет с фильтрами 515–695 нм',
+      safetyNotes: 'Подбор фильтров и энергии по фототипу, обязательна защита глаз.',
+      heroImage: {
+        filename: 'device-m22-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Модуль Lumenis M22',
+      },
+      galleryImages: [
+        {
+          filename: 'device-m22-handpiece.png',
+          purpose: ImagePurpose.GALLERY,
+          caption: 'Сменные фильтры для разных задач',
+        },
+      ],
+      certBadges: [{ type: DeviceCertType.FDA, label: 'FDA Cleared' }],
+      attachments: [{ name: 'SapphireCool', description: 'Контактное охлаждение для комфорта' }],
+      indications: ['Фотостарение и тусклый тон', 'Лентиго и купероз', 'Неровный микрорельеф'],
+      contraindications: ['Загар менее чем 2 недели назад', 'Фотосенсибилизирующие препараты'],
+      sideEffects: [
+        { text: 'Потемнение пигмента на 3–7 дней', rarity: Rarity.COMMON },
+      ],
+      faq: [
+        {
+          question: 'Сколько процедур нужно?',
+          answer: 'Рекомендуем курс 3–5 сеансов с интервалом 3–4 недели.',
+        },
+      ],
+      seo: {
+        metaTitle: 'Lumenis M22 — фотолечение пигментации',
+        metaDescription: 'IPL-терапия для сосудов и пигмента с индивидуальным подбором фильтров.',
+      },
+    },
+    {
+      brand: 'BTL',
+      model: 'Exilis Ultra 360',
+      slug: 'btl-exilis-ultra',
+      positioning: 'Радиочастотный лифтинг и ремоделирование силуэта',
+      principle: 'Монополярная RF и ультразвук с контролем температуры',
+      safetyNotes: 'Контроль температуры кожи в реальном времени, процедура комфортная и без анестезии.',
+      heroImage: {
+        filename: 'device-exilis-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Ручка Exilis Ultra 360',
+      },
+      galleryImages: [
+        { filename: 'device-exilis-body.png', purpose: ImagePurpose.GALLERY, caption: 'Насадка для тела с охлаждением' },
+      ],
+      indications: ['Снижение упругости кожи', 'Локальные жировые отложения', 'Морщины и дряблость'],
+      contraindications: ['Металлические импланты в зоне прогрева', 'Беременность'],
+      sideEffects: [{ text: 'Кратковременное покраснение кожи', rarity: Rarity.COMMON }],
+      faq: [
+        { question: 'Есть ли реабилитация?', answer: 'Нет, можно сразу вернуться к обычной активности.' },
+      ],
+      seo: {
+        metaTitle: 'Exilis Ultra 360 — RF-лифтинг без боли',
+        metaDescription: 'Комфортный прогрев тканей для лифтинга лица и тела с контролем температуры.',
+      },
+    },
+    {
+      brand: 'CoolSculpting',
+      model: 'Elite',
+      slug: 'coolsculpting-elite',
+      positioning: 'Криолиполиз для коррекции фигуры',
+      principle: 'Контролируемое охлаждение жировой ткани с двойными аппликаторами',
+      safetyNotes: 'Перед установкой аппликатора наносится защитная мембрана; зона оценивается врачом.',
+      heroImage: {
+        filename: 'device-coolsculpting-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Аппликаторы CoolSculpting Elite',
+      },
+      galleryImages: [
+        {
+          filename: 'device-coolsculpting-applicators.png',
+          purpose: ImagePurpose.GALLERY,
+          caption: 'Насадки для живота, бёдер и подподбородочной зоны',
+        },
+      ],
+      indications: ['Локальные жировые ловушки', 'Контурирование живота и фланков'],
+      contraindications: ['Грыжи в зоне воздействия', 'Криоглобулинемия'],
+      sideEffects: [
+        { text: 'Онемение в зоне установки аппликатора до 2 недель', rarity: Rarity.COMMON },
+        { text: 'Редко — гематомы после массажа', rarity: Rarity.UNCOMMON },
+      ],
+      faq: [
+        {
+          question: 'Когда ждать результата?',
+          answer: 'Редукция жировых клеток развивается в течение 6–12 недель после сеанса.',
+        },
+      ],
+      seo: {
+        metaTitle: 'CoolSculpting Elite — нехирургическое уменьшение жира',
+        metaDescription: 'Криолиполиз с двойными аппликаторами для точечной коррекции силуэта.',
+      },
+    },
+    {
+      brand: 'HydraFacial',
+      model: 'Syndeo',
+      slug: 'hydrafacial-syndeo',
+      positioning: 'Гидропиллинг и инфьюзия активных сывороток',
+      principle: 'Вакуумный вортекс-поток и последовательные пилинговые этапы',
+      safetyNotes: 'Подбор кислотных составов по типу кожи, давление регулируется по ощущениям пациента.',
+      heroImage: {
+        filename: 'device-hydrafacial-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Консоль HydraFacial Syndeo',
+      },
+      galleryImages: [
+        {
+          filename: 'device-hydrafacial-handpiece.png',
+          purpose: ImagePurpose.GALLERY,
+          caption: 'Насадки для очищения и инфьюзии',
+        },
+      ],
+      attachments: [
+        { name: 'Dermabuilder', description: 'Пептидный коктейль для упругости' },
+        { name: 'Britenol', description: 'Осветление и ровный тон' },
+      ],
+      indications: ['Комедоны и расширенные поры', 'Тусклый тон', 'Подготовка к лазерным процедурам'],
+      contraindications: ['Активный герпес', 'Непереносимость кислот в составе сывороток'],
+      sideEffects: [{ text: 'Кратковременное покраснение после вакуумной чистки', rarity: Rarity.COMMON }],
+      faq: [
+        { question: 'Можно ли делать летом?', answer: 'Да, при использовании SPF и щадящих растворов по показаниям.' },
+      ],
+      seo: {
+        metaTitle: 'HydraFacial Syndeo — многоэтапное очищение',
+        metaDescription: 'Гидропиллинг, вакуумная чистка и сыворотки в одном сеансе для сияния кожи.',
+      },
+    },
+    {
+      brand: 'Endospheres',
+      model: 'Evolution',
+      slug: 'endospheres-therapy',
+      positioning: 'Микровибрационно-компрессионный массаж',
+      principle: 'Ротация сферами с микровибрацией 29–355 Гц',
+      safetyNotes: 'Сила давления подбирается индивидуально, важно достаточное увлажнение кожи маслом.',
+      heroImage: {
+        filename: 'device-endospheres-hero.png',
+        purpose: ImagePurpose.HERO,
+        alt: 'Аппарат Endospheres Evolution',
+      },
+      galleryImages: [
+        { filename: 'device-endospheres-handpiece.png', purpose: ImagePurpose.GALLERY, caption: 'Манипула с вращающимися сферами' },
+      ],
+      indications: ['Отёчность и лимфостаз', 'Снижение тонуса кожи тела', 'Целлюлит'],
+      contraindications: ['Онкологические заболевания', 'Тромбофлебит'],
+      sideEffects: [{ text: 'Лёгкая чувствительность мышц на следующий день', rarity: Rarity.COMMON }],
+      faq: [
+        {
+          question: 'Какой курс нужен?',
+          answer: 'Стандартно 8–12 процедур 1–2 раза в неделю, далее поддержка по показаниям.',
+        },
+      ],
+      seo: {
+        metaTitle: 'Endospheres Therapy — лимфодренаж и тонус',
+        metaDescription: 'Микровибрационный массаж для улучшения микроциркуляции и борьбы с отёками.',
+      },
+    },
+  ];
+
+  for (const seed of devices) {
+    const device = await prisma.device.upsert({
+      where: { slug: seed.slug },
+      update: {
+        brand: seed.brand,
+        model: seed.model,
+        positioning: seed.positioning,
+        principle: seed.principle,
+        safetyNotes: seed.safetyNotes,
+      },
+      create: {
+        brand: seed.brand,
+        model: seed.model,
+        slug: seed.slug,
+        positioning: seed.positioning,
+        principle: seed.principle,
+        safetyNotes: seed.safetyNotes,
+      },
+    });
+
+    await prisma.deviceCertBadge.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceAttachment.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceIndication.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceContraindication.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceSideEffect.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceDocument.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceFaq.deleteMany({ where: { deviceId: device.id } });
+    await prisma.deviceImage.deleteMany({ where: { deviceId: device.id } });
+
+    const images: DeviceImageSeed[] = [
+      ...(seed.heroImage ? [seed.heroImage] : []),
+      ...(seed.galleryImages ?? []),
+      ...(seed.inlineImages ?? []),
+    ];
+
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      const file = await ensureSeedImage(img.filename, ONE_PIXEL_BASE64, DEFAULT_IMAGE_META);
+
+      await prisma.deviceImage.create({
+        data: {
+          deviceId: device.id,
+          fileId: file.id,
+          purpose: img.purpose,
+          order: img.order ?? i,
+          alt: img.alt ?? null,
+          caption: img.caption ?? null,
+        },
+      });
+    }
+
+    for (const badge of seed.certBadges ?? []) {
+      await prisma.deviceCertBadge.create({
+        data: {
+          deviceId: device.id,
+          type: badge.type,
+          label: badge.label,
+        },
+      });
+    }
+
+    for (const attachment of seed.attachments ?? []) {
+      const imageFile = attachment.image
+        ? await ensureSeedImage(attachment.image.filename, ONE_PIXEL_BASE64, DEFAULT_IMAGE_META)
+        : null;
+
+      await prisma.deviceAttachment.create({
+        data: {
+          deviceId: device.id,
+          name: attachment.name,
+          description: attachment.description,
+          imageId: imageFile?.id ?? null,
+        },
+      });
+    }
+
+    for (const text of seed.indications ?? []) {
+      await prisma.deviceIndication.create({ data: { deviceId: device.id, text } });
+    }
+
+    for (const text of seed.contraindications ?? []) {
+      await prisma.deviceContraindication.create({ data: { deviceId: device.id, text } });
+    }
+
+    for (const sideEffect of seed.sideEffects ?? []) {
+      await prisma.deviceSideEffect.create({
+        data: {
+          deviceId: device.id,
+          text: sideEffect.text,
+          rarity: sideEffect.rarity,
+        },
+      });
+    }
+
+    for (let i = 0; i < (seed.faq?.length ?? 0); i++) {
+      const item = seed.faq![i];
+      await prisma.deviceFaq.create({
+        data: {
+          deviceId: device.id,
+          question: item.question,
+          answer: item.answer,
+          order: item.order ?? i,
+        },
+      });
+    }
+
+    await prisma.seoDevice.upsert({
+      where: { deviceId: device.id },
+      update: {
+        metaTitle: seed.seo?.metaTitle ?? null,
+        metaDescription: seed.seo?.metaDescription ?? null,
+        ogImageId: null,
+      },
+      create: {
+        deviceId: device.id,
+        metaTitle: seed.seo?.metaTitle ?? null,
+        metaDescription: seed.seo?.metaDescription ?? null,
+        ogImageId: null,
+      },
+    });
+  }
+}
+
 async function main() {
   await ensureAdmin();
   await seedOrganization();
   await seedStaticPages();
+  await seedDevices();
   await seedCatalog();
 
   console.log('✅ Seed completed');
