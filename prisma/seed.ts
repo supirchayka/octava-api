@@ -1726,11 +1726,11 @@ async function seedDevices() {
 }
 
 async function main() {
-  //await ensureAdmin();
-  //await seedOrganization();
+  await ensureAdmin();
+  await seedOrganization();
   await seedStaticPages();
-  //await seedDevices();
-  //await seedCatalog();
+  await seedDevices();
+  await seedCatalog();
 
   console.log('✅ Seed completed');
 }
