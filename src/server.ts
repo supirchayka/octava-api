@@ -26,7 +26,7 @@ const start = async () => {
 
   // плагины
   await app.register(cors, {
-    origin: ['http://localhost:3000'], // админка/фронт
+    origin: ['http://localhost:3000', 'http://79.174.86.247:3000'], // админка/фронт
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
