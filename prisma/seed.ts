@@ -147,7 +147,7 @@ async function seedStaticPages() {
       },
     });
   }
-  /*
+
   const home = await prisma.staticPage.findUniqueOrThrow({
     where: { type: StaticPageType.HOME },
   });
@@ -234,7 +234,7 @@ async function seedStaticPages() {
       ogImageId: homeHeroImage.id,
     },
   });
-  */
+
   const about = await prisma.staticPage.findUniqueOrThrow({
     where: { type: StaticPageType.ABOUT },
   });
@@ -346,7 +346,7 @@ async function seedStaticPages() {
       },
     ],
   });
-  /*
+
   const contacts = await prisma.staticPage.findUniqueOrThrow({
     where: { type: StaticPageType.CONTACTS },
   });
@@ -439,10 +439,9 @@ async function seedStaticPages() {
         'Мы уважаем личные данные пациентов и применяем организационные и технические меры безопасности. Подробно раскрываем цели сбора, сроки хранения и права пользователей.',
     },
   });
-  */
 
-  const pageIds = [ about.id];
-  //const pageIds = [home.id, about.id, contacts.id, pdn.id, privacy.id];
+  const pageIds = [home.id, about.id, contacts.id, pdn.id, privacy.id];
+
   for (const pid of pageIds) {
     await prisma.seoStaticPage.upsert({
       where: { pageId: pid },
@@ -471,7 +470,6 @@ async function seedStaticPages() {
       },
     });
   }
-  
 }
 
 type ServiceSeed = {
