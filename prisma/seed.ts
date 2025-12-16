@@ -14,6 +14,7 @@ import {
   ServicePriceType,
   StaticPageType,
   PhoneType,
+  TrustItemKind,
   Storage,
 } from '@prisma/client';
 import { hashPassword } from '../src/utils/password';
@@ -238,6 +239,12 @@ async function seedStaticPages() {
     where: { type: StaticPageType.ABOUT },
   });
 
+  const aboutHeroImage = await ensureSeedImage(
+    'about-hero.png',
+    ONE_PIXEL_BASE64,
+    { ...DEFAULT_IMAGE_META, width: 1400, height: 788 },
+  );
+
   await prisma.aboutPage.upsert({
     where: { id: about.id },
     update: {
@@ -246,6 +253,7 @@ async function seedStaticPages() {
         'Мы работаем на стыке медицины и эстетики: команда врачей использует международные стандарты, обучается и внедряет технологии омоложения.',
       howWeAchieveText:
         'Собираем междисциплинарные консилиумы, ведём пациента от первичной консультации до контроля результатов и профилактики.',
+      heroImageId: aboutHeroImage.id,
     },
     create: {
       id: about.id,
@@ -254,7 +262,89 @@ async function seedStaticPages() {
         'Мы работаем на стыке медицины и эстетики: команда врачей использует международные стандарты, обучается и внедряет технологии омоложения.',
       howWeAchieveText:
         'Собираем междисциплинарные консилиумы, ведём пациента от первичной консультации до контроля результатов и профилактики.',
+      heroImageId: aboutHeroImage.id,
     },
+  });
+
+  await prisma.aboutHeroCta.upsert({
+    where: { aboutPageId: about.id },
+    update: {
+      title: 'Записаться на консультацию',
+      subtitle: 'Свяжемся, предложим удобное время и подготовим врача под ваш запрос.',
+    },
+    create: {
+      aboutPageId: about.id,
+      title: 'Записаться на консультацию',
+      subtitle: 'Свяжемся, предложим удобное время и подготовим врача под ваш запрос.',
+    },
+  });
+
+  await prisma.aboutTrustItem.deleteMany({ where: { aboutPageId: about.id } });
+
+  await prisma.aboutTrustItem.createMany({
+    data: [
+      {
+        aboutPageId: about.id,
+        kind: TrustItemKind.LICENSE,
+        title: 'Медицинская лицензия на деятельность в области косметологии',
+        number: 'Л041-01137-77/00590027',
+        issuedAt: new Date('2022-04-20'),
+        issuedBy: 'Департамент здравоохранения г. Москвы',
+      },
+      {
+        aboutPageId: about.id,
+        kind: TrustItemKind.CERTIFICATE,
+        title: 'Сертификат соответствия на аппаратные методики',
+        number: 'RU.77.01.34.003.E.000001.04.24',
+        issuedAt: new Date('2024-04-01'),
+        issuedBy: 'Росздравнадзор',
+      },
+      {
+        aboutPageId: about.id,
+        kind: TrustItemKind.AWARD,
+        title: 'Премия за инновационный подход в anti-age медицине',
+        issuedAt: new Date('2023-11-12'),
+        issuedBy: 'National Aesthetic Awards',
+      },
+      {
+        aboutPageId: about.id,
+        kind: TrustItemKind.ATTESTATION,
+        title: 'Ежегодная аттестация врачей OCTAVA',
+        issuedAt: new Date('2024-02-10'),
+        issuedBy: 'Внутренняя комиссия клиники',
+      },
+    ],
+  });
+
+  await prisma.aboutFact.deleteMany({ where: { aboutPageId: about.id } });
+
+  await prisma.aboutFact.createMany({
+    data: [
+      {
+        aboutPageId: about.id,
+        title: 'Мультидисциплинарная команда',
+        text: 'Дерматологи, эндокринологи, косметологи и реабилитологи составляют общий план лечения.',
+        order: 0,
+      },
+      {
+        aboutPageId: about.id,
+        title: 'Персонализированные протоколы',
+        text: 'Подбираем сочетание аппаратных и инъекционных методик под здоровье кожи и анамнез пациента.',
+        order: 1,
+      },
+      {
+        aboutPageId: about.id,
+        title: 'Доказательная база',
+        text: 'Используем сертифицированные препараты и методики, подтверждённые международными исследованиями.',
+        order: 2,
+      },
+      {
+        aboutPageId: about.id,
+        title: 'Сопровождение после процедур',
+        text: 'Контролируем восстановление, даём рекомендации по уходу и анализируем результаты.',
+        order: 3,
+      },
+    ],
   });
 
   const contacts = await prisma.staticPage.findUniqueOrThrow({
