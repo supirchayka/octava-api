@@ -62,6 +62,18 @@ export class CatalogService {
     };
   }
 
+  private mapSpecialist(specialist: any) {
+    return {
+      id: specialist.id,
+      firstName: specialist.firstName,
+      lastName: specialist.lastName,
+      specialization: specialist.specialization,
+      biography: specialist.biography,
+      experienceYears: specialist.experienceYears,
+      photo: this.mapFileMeta(specialist.photo),
+    };
+  }
+
   // ===================== УСЛУГИ =====================
 
   /**
@@ -194,6 +206,7 @@ export class CatalogService {
       legalDisclaimer,
       deviceLinks,
       images,
+      specialistLinks,
     ] = await Promise.all([
       this.app.prisma.seoService.findUnique({
         where: { serviceId: service.id },
@@ -242,6 +255,17 @@ export class CatalogService {
           file: true,
         },
       }),
+      this.app.prisma.serviceSpecialist.findMany({
+        where: { serviceId: service.id },
+        include: {
+          specialist: {
+            include: {
+              photo: true,
+              services: { include: { service: true } },
+            },
+          },
+        },
+      }),
     ]);
 
     const heroImages = images
@@ -265,6 +289,17 @@ export class CatalogService {
       brand: link.device.brand,
       model: link.device.model,
       positioning: link.device.positioning,
+    }));
+
+    const specialists = specialistLinks.map((link) => ({
+      ...this.mapSpecialist(link.specialist),
+      services: link.specialist.services.map((serviceLink: any) => ({
+        id: serviceLink.service.id,
+        slug: serviceLink.service.slug,
+        name: serviceLink.service.name,
+        shortOffer: serviceLink.service.shortOffer,
+        priceFrom: serviceLink.service.priceFrom?.toString() ?? null,
+      })),
     }));
 
     return {
@@ -319,6 +354,7 @@ export class CatalogService {
         order: s.order,
       })),
       devices,
+      specialists,
       galleryImages,
       inlineImages,
       faq: faq.map((q) => ({
@@ -329,6 +365,33 @@ export class CatalogService {
       })),
       legalDisclaimer: legalDisclaimer?.text ?? null,
     };
+  }
+
+  // ===================== СПЕЦИАЛИСТЫ =====================
+
+  async getSpecialistsList() {
+    const specialists = await this.app.prisma.specialist.findMany({
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      include: {
+        photo: true,
+        services: {
+          include: {
+            service: true,
+          },
+        },
+      },
+    });
+
+    return specialists.map((specialist) => ({
+      ...this.mapSpecialist(specialist),
+      services: specialist.services.map((link: any) => ({
+        id: link.service.id,
+        slug: link.service.slug,
+        name: link.service.name,
+        shortOffer: link.service.shortOffer,
+        priceFrom: link.service.priceFrom?.toString() ?? null,
+      })),
+    }));
   }
 
   // ===================== АППАРАТЫ =====================

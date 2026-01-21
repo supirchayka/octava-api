@@ -9,6 +9,7 @@ import {
   CategoryBody,
   ServiceBody,
   DeviceBody,
+  SpecialistBody,
 } from '../services/admin-catalog.service';
 
 export class AdminCatalogController {
@@ -136,6 +137,43 @@ export class AdminCatalogController {
     this.ensureEditor(request);
     const { id } = request.params as { id: string };
     await this.service.deleteDevice(Number(id));
+    return reply.code(204).send();
+  };
+
+  /* ========== Specialists ========== */
+
+  listSpecialists = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const specialists = await this.service.listSpecialists();
+    return reply.send(specialists);
+  };
+
+  getSpecialist = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { id } = request.params as { id: string };
+    const specialist = await this.service.getSpecialistById(Number(id));
+    return reply.send(specialist);
+  };
+
+  createSpecialist = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const body = request.body as SpecialistBody;
+    const specialist = await this.service.createSpecialist(body);
+    return reply.code(201).send(specialist);
+  };
+
+  updateSpecialist = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { id } = request.params as { id: string };
+    const body = request.body as SpecialistBody;
+    const specialist = await this.service.updateSpecialist(Number(id), body);
+    return reply.send(specialist);
+  };
+
+  deleteSpecialist = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const { id } = request.params as { id: string };
+    await this.service.deleteSpecialist(Number(id));
     return reply.code(204).send();
   };
 }
