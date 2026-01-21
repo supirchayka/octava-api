@@ -394,6 +394,35 @@ export class CatalogService {
     }));
   }
 
+  async getSpecialistById(id: number) {
+    const specialist = await this.app.prisma.specialist.findUnique({
+      where: { id },
+      include: {
+        photo: true,
+        services: {
+          include: {
+            service: true,
+          },
+        },
+      },
+    });
+
+    if (!specialist) {
+      return null;
+    }
+
+    return {
+      ...this.mapSpecialist(specialist),
+      services: specialist.services.map((link: any) => ({
+        id: link.service.id,
+        slug: link.service.slug,
+        name: link.service.name,
+        shortOffer: link.service.shortOffer,
+        priceFrom: link.service.priceFrom?.toString() ?? null,
+      })),
+    };
+  }
+
   // ===================== АППАРАТЫ =====================
 
   /**

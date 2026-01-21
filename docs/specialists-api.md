@@ -133,6 +133,39 @@
 ]
 ```
 
+### Получить специалиста по ID
+`GET /specialists/:id`
+
+**Ответ 200**
+```json
+{
+  "id": 1,
+  "firstName": "Анна",
+  "lastName": "Иванова",
+  "specialization": "Дерматолог",
+  "biography": "...",
+  "experienceYears": 8,
+  "photo": {
+    "id": 10,
+    "url": "/uploads/...",
+    "originalName": "anna.jpg",
+    "mime": "image/jpeg",
+    "sizeBytes": 12345,
+    "width": 800,
+    "height": 600
+  },
+  "services": [
+    {
+      "id": 3,
+      "slug": "...",
+      "name": "...",
+      "shortOffer": "...",
+      "priceFrom": "2500.00"
+    }
+  ]
+}
+```
+
 ### Услуга с детальными специалистами
 `GET /services/:slug`
 

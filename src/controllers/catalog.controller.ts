@@ -73,4 +73,16 @@ export class CatalogController {
     const specialists = await this.service.getSpecialistsList();
     return reply.send(specialists);
   };
+
+  getSpecialist = async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    const { id } = request.params;
+    const specialist = await this.service.getSpecialistById(Number(id));
+    if (!specialist) {
+      return reply.code(404).send({ message: "Специалист не найден" });
+    }
+    return reply.send(specialist);
+  };
 }

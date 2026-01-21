@@ -18,4 +18,5 @@ export default async function catalogRoutes(app: FastifyInstance) {
 
   // Специалисты
   app.get("/specialists", controller.getSpecialistsList);
+  app.get("/specialists/:id", controller.getSpecialist);
 }
