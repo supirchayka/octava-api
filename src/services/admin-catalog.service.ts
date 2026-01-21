@@ -65,6 +65,7 @@ export interface ServiceBody {
   heroImageFileId?: number | null; // файл для HERO
   galleryImageFileIds?: number[] | null; // файлы для галереи
   usedDeviceIds?: number[];        // какие аппараты используются
+  specialistIds?: number[];        // какие специалисты привязаны
 
   servicePricesExtended?: ServicePriceExtendedBody[];
   seo?: SeoServiceBody;
@@ -81,6 +82,18 @@ export interface DeviceBody {
   heroImageFileId?: number | null;
   galleryImageFileIds?: number[] | null;
   seo?: SeoDeviceBody;
+}
+
+/* ========== Специалист ========== */
+
+export interface SpecialistBody {
+  firstName: string;
+  lastName: string;
+  specialization: string;
+  biography: string;
+  experienceYears: number;
+  photoFileId: number;
+  serviceIds?: number[];
 }
 
 type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
@@ -149,6 +162,32 @@ export class AdminCatalogService {
       alt: image.alt ?? null,
       caption: image.caption ?? null,
       file: this.mapFile(image.file),
+    };
+  }
+
+  private mapSpecialistSummary(specialist: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+    experienceYears: number;
+    photo: {
+      id: number;
+      path: string;
+      originalName: string;
+      mime: string;
+      sizeBytes: number;
+      width: number | null;
+      height: number | null;
+    };
+  }) {
+    return {
+      id: specialist.id,
+      firstName: specialist.firstName,
+      lastName: specialist.lastName,
+      specialization: specialist.specialization,
+      experienceYears: specialist.experienceYears,
+      photo: this.mapFile(specialist.photo),
     };
   }
 
@@ -523,6 +562,18 @@ export class AdminCatalogService {
         }
       }
 
+      // Специалисты
+      if (body.specialistIds?.length) {
+        for (const specialistId of body.specialistIds) {
+          await tx.serviceSpecialist.create({
+            data: {
+              serviceId: service.id,
+              specialistId,
+            },
+          });
+        }
+      }
+
       // Расширенные цены
       if (body.servicePricesExtended?.length) {
         for (let i = 0; i < body.servicePricesExtended.length; i++) {
@@ -552,6 +603,7 @@ export class AdminCatalogService {
         include: {
           pricesExtended: true,
           devices: { include: { device: true } },
+          specialists: { include: { specialist: { include: { photo: true } } } },
           images: { include: { file: true } },
           seo: true,
         },
@@ -566,6 +618,15 @@ export class AdminCatalogService {
       category: true;
       images: { include: { file: true } };
       devices: true;
+      specialists: {
+        include: {
+          specialist: {
+            include: {
+              photo: true;
+            };
+          };
+        };
+      };
       pricesExtended: true;
       seo: { include: { ogImage: true } };
     };
@@ -599,6 +660,10 @@ export class AdminCatalogService {
       galleryImageFileIds: galleryImages.map((img) => img.fileId),
       galleryImages: galleryImages.map((img) => this.mapImage(img)!),
       usedDeviceIds: service.devices.map((device) => device.deviceId),
+      specialistIds: service.specialists.map((link) => link.specialistId),
+      specialists: service.specialists.map((link) =>
+        this.mapSpecialistSummary(link.specialist),
+      ),
       servicePricesExtended: service.pricesExtended.map((price) => ({
         id: price.id,
         title: price.title,
@@ -625,6 +690,9 @@ export class AdminCatalogService {
         category: true,
         images: { include: { file: true } },
         devices: true,
+        specialists: {
+          include: { specialist: { include: { photo: true } } },
+        },
         pricesExtended: { orderBy: { order: 'asc' } },
         seo: { include: { ogImage: true } },
       },
@@ -640,6 +708,9 @@ export class AdminCatalogService {
         category: true,
         images: { include: { file: true } },
         devices: true,
+        specialists: {
+          include: { specialist: { include: { photo: true } } },
+        },
         pricesExtended: { orderBy: { order: 'asc' } },
         seo: { include: { ogImage: true } },
       },
@@ -751,6 +822,22 @@ export class AdminCatalogService {
         }
       }
 
+      // Специалисты: если массив передан — пересобираем связи
+      if (body.specialistIds !== undefined) {
+        await tx.serviceSpecialist.deleteMany({ where: { serviceId: id } });
+
+        if (body.specialistIds?.length) {
+          for (const specialistId of body.specialistIds) {
+            await tx.serviceSpecialist.create({
+              data: {
+                serviceId: id,
+                specialistId,
+              },
+            });
+          }
+        }
+      }
+
       // Расширенные цены: если массив передан — пересобираем
       if (body.servicePricesExtended !== undefined) {
         await tx.servicePriceExtended.deleteMany({ where: { serviceId: id } });
@@ -784,6 +871,7 @@ export class AdminCatalogService {
         include: {
           pricesExtended: true,
           devices: { include: { device: true } },
+          specialists: { include: { specialist: { include: { photo: true } } } },
           images: { include: { file: true } },
           seo: true,
         },
@@ -1054,5 +1142,158 @@ export class AdminCatalogService {
 
   async deleteDevice(id: number) {
     await this.app.prisma.device.delete({ where: { id } });
+  }
+
+  /* ===================== SPECIALISTS ===================== */
+
+  private mapSpecialistResponse(
+    specialist: Prisma.SpecialistGetPayload<{
+      include: {
+        photo: true;
+        services: { include: { service: true } };
+      };
+    }>,
+  ) {
+    return {
+      id: specialist.id,
+      firstName: specialist.firstName,
+      lastName: specialist.lastName,
+      specialization: specialist.specialization,
+      biography: specialist.biography,
+      experienceYears: specialist.experienceYears,
+      photoFileId: specialist.photoFileId,
+      photo: this.mapFile(specialist.photo),
+      serviceIds: specialist.services.map((link) => link.serviceId),
+      services: specialist.services.map((link) => ({
+        id: link.service.id,
+        slug: link.service.slug,
+        name: link.service.name,
+        shortOffer: link.service.shortOffer,
+      })),
+    };
+  }
+
+  async listSpecialists() {
+    const specialists = await this.app.prisma.specialist.findMany({
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
+      include: {
+        photo: true,
+        services: { include: { service: true } },
+      },
+    });
+
+    return specialists.map((specialist) =>
+      this.mapSpecialistResponse(specialist),
+    );
+  }
+
+  async getSpecialistById(id: number) {
+    const specialist = await this.app.prisma.specialist.findUnique({
+      where: { id },
+      include: {
+        photo: true,
+        services: { include: { service: true } },
+      },
+    });
+
+    if (!specialist) {
+      throw this.app.httpErrors.notFound('Специалист не найден');
+    }
+
+    return this.mapSpecialistResponse(specialist);
+  }
+
+  async createSpecialist(body: SpecialistBody) {
+    return this.app.prisma.$transaction(async (tx) => {
+      const specialist = await tx.specialist.create({
+        data: {
+          firstName: body.firstName,
+          lastName: body.lastName,
+          specialization: body.specialization,
+          biography: body.biography,
+          experienceYears: body.experienceYears,
+          photoFileId: body.photoFileId,
+        },
+      });
+
+      if (body.serviceIds?.length) {
+        for (const serviceId of body.serviceIds) {
+          await tx.serviceSpecialist.create({
+            data: {
+              serviceId,
+              specialistId: specialist.id,
+            },
+          });
+        }
+      }
+
+      const full = await tx.specialist.findUnique({
+        where: { id: specialist.id },
+        include: {
+          photo: true,
+          services: { include: { service: true } },
+        },
+      });
+
+      return this.mapSpecialistResponse(full!);
+    });
+  }
+
+  async updateSpecialist(id: number, body: SpecialistBody) {
+    return this.app.prisma.$transaction(async (tx) => {
+      const existing = await tx.specialist.findUnique({ where: { id } });
+      if (!existing) {
+        throw this.app.httpErrors.notFound('Специалист не найден');
+      }
+
+      await tx.specialist.update({
+        where: { id },
+        data: {
+          ...(body.firstName !== undefined && { firstName: body.firstName }),
+          ...(body.lastName !== undefined && { lastName: body.lastName }),
+          ...(body.specialization !== undefined && {
+            specialization: body.specialization,
+          }),
+          ...(body.biography !== undefined && { biography: body.biography }),
+          ...(body.experienceYears !== undefined && {
+            experienceYears: body.experienceYears,
+          }),
+          ...(body.photoFileId !== undefined && {
+            photoFileId: body.photoFileId,
+          }),
+        },
+      });
+
+      if (body.serviceIds !== undefined) {
+        await tx.serviceSpecialist.deleteMany({
+          where: { specialistId: id },
+        });
+
+        if (body.serviceIds?.length) {
+          for (const serviceId of body.serviceIds) {
+            await tx.serviceSpecialist.create({
+              data: {
+                serviceId,
+                specialistId: id,
+              },
+            });
+          }
+        }
+      }
+
+      const full = await tx.specialist.findUnique({
+        where: { id },
+        include: {
+          photo: true,
+          services: { include: { service: true } },
+        },
+      });
+
+      return this.mapSpecialistResponse(full!);
+    });
+  }
+
+  async deleteSpecialist(id: number) {
+    await this.app.prisma.specialist.delete({ where: { id } });
   }
 }

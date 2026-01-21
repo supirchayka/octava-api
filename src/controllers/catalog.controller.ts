@@ -66,4 +66,11 @@ export class CatalogController {
     }
     return reply.send(data);
   };
+
+  // ===== специалисты =====
+
+  getSpecialistsList = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const specialists = await this.service.getSpecialistsList();
+    return reply.send(specialists);
+  };
 }

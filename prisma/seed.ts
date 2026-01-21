@@ -1339,6 +1339,170 @@ async function seedCatalog() {
       },
     });
   }
+
+  await prisma.serviceSpecialist.deleteMany();
+  await prisma.specialist.deleteMany();
+
+  const serviceMap = await prisma.service.findMany({
+    select: { id: true, slug: true },
+  });
+  const serviceIdBySlug = new Map(serviceMap.map((svc) => [svc.slug, svc.id]));
+
+  const specialists = [
+    {
+      firstName: 'Анна',
+      lastName: 'Иванова',
+      specialization: 'Дерматолог-косметолог',
+      biography:
+        'Специализируется на инъекционных протоколах, работе с качеством кожи и профилактике возрастных изменений.',
+      experienceYears: 12,
+      photoFilename: 'specialist-anna-ivanova.png',
+      serviceSlugs: ['biorevitalizaciya-gk', 'mezoterapiya-vitaminami', 'botulinoterapiya'],
+    },
+    {
+      firstName: 'Мария',
+      lastName: 'Петрова',
+      specialization: 'Врач-косметолог',
+      biography:
+        'Эксперт по реабилитации кожи после стрессовых факторов и аппаратных процедур.',
+      experienceYears: 9,
+      photoFilename: 'specialist-maria-petrova.png',
+      serviceSlugs: ['rf-lifting-litsa', 'mikrotokovaya-terapiya', 'lazernoe-omolozhenie'],
+    },
+    {
+      firstName: 'Екатерина',
+      lastName: 'Смирнова',
+      specialization: 'Дерматолог',
+      biography:
+        'Фокус на комплексной диагностике кожи и подборе программ ухода.',
+      experienceYears: 7,
+      photoFilename: 'specialist-ekaterina-smirnova.png',
+      serviceSlugs: ['dermatoskopiya', 'konsultaciya-vracha'],
+    },
+    {
+      firstName: 'Ольга',
+      lastName: 'Кузнецова',
+      specialization: 'Врач-эстетист',
+      biography:
+        'Работает с восстановлением тонуса кожи и коррекцией овала лица.',
+      experienceYears: 10,
+      photoFilename: 'specialist-olga-kuznetsova.png',
+      serviceSlugs: ['rf-lifting-litsa', 'smas-lifting-ultrazvuk'],
+    },
+    {
+      firstName: 'Юлия',
+      lastName: 'Соколова',
+      specialization: 'Косметолог',
+      biography:
+        'Специализация — уходовые программы и комплексная эстетическая терапия.',
+      experienceYears: 6,
+      photoFilename: 'specialist-yulia-sokolova.png',
+      serviceSlugs: ['uhod-glubokoe-uvlazhnenie', 'piling-mindalnyj'],
+    },
+    {
+      firstName: 'Светлана',
+      lastName: 'Романова',
+      specialization: 'Врач-косметолог',
+      biography:
+        'Занимается программами омоложения и коррекции мимических морщин.',
+      experienceYears: 11,
+      photoFilename: 'specialist-svetlana-romanova.png',
+      serviceSlugs: ['botulinoterapiya', 'konturnaya-plastika', 'mezoterapiya-vitaminami'],
+    },
+    {
+      firstName: 'Наталья',
+      lastName: 'Громова',
+      specialization: 'Дерматолог',
+      biography:
+        'Проводит комплексные консультации и сопровождает пациента на всех этапах терапии.',
+      experienceYears: 8,
+      photoFilename: 'specialist-natalia-gromova.png',
+      serviceSlugs: ['konsultaciya-vracha', 'lab-skrining'],
+    },
+    {
+      firstName: 'Алина',
+      lastName: 'Морозова',
+      specialization: 'Врач-косметолог',
+      biography:
+        'В работе сочетает инъекционные методики и аппаратные протоколы.',
+      experienceYears: 9,
+      photoFilename: 'specialist-alina-morozova.png',
+      serviceSlugs: ['rf-lifting-litsa', 'biorevitalizaciya-gk', 'konturnaya-plastika'],
+    },
+    {
+      firstName: 'Ирина',
+      lastName: 'Николаева',
+      specialization: 'Врач-косметолог',
+      biography:
+        'Специализируется на восстановлении гидробаланса кожи и профилактике возрастных изменений.',
+      experienceYears: 5,
+      photoFilename: 'specialist-irina-nikolaeva.png',
+      serviceSlugs: ['biorevitalizaciya-gk', 'mezoterapiya-vitaminami'],
+    },
+    {
+      firstName: 'Татьяна',
+      lastName: 'Зайцева',
+      specialization: 'Эстетист',
+      biography:
+        'Ведет программы ухода и релаксационные процедуры для кожи и тела.',
+      experienceYears: 4,
+      photoFilename: 'specialist-tatyana-zaytseva.png',
+      serviceSlugs: ['relaks-massazh-lica', 'miofascialnyj-massazh', 'piling-mindalnyj'],
+    },
+    {
+      firstName: 'Ксения',
+      lastName: 'Федорова',
+      specialization: 'Дерматолог-косметолог',
+      biography:
+        'Комплексный подход к эстетике: диагностика, аппаратные протоколы, инъекции.',
+      experienceYears: 13,
+      photoFilename: 'specialist-ksenia-fedorova.png',
+      serviceSlugs: ['rf-lifting-litsa', 'botulinoterapiya', 'lab-skrining'],
+    },
+    {
+      firstName: 'Елена',
+      lastName: 'Волкова',
+      specialization: 'Врач-косметолог',
+      biography:
+        'Проводит процедуры по коррекции контуров лица и работает с возрастными изменениями.',
+      experienceYears: 14,
+      photoFilename: 'specialist-elena-volkova.png',
+      serviceSlugs: ['konturnaya-plastika', 'botulinoterapiya'],
+    },
+  ];
+
+  for (const specialist of specialists) {
+    const photo = await ensureSeedImage(
+      specialist.photoFilename,
+      ONE_PIXEL_BASE64,
+      DEFAULT_IMAGE_META,
+    );
+
+    const created = await prisma.specialist.create({
+      data: {
+        firstName: specialist.firstName,
+        lastName: specialist.lastName,
+        specialization: specialist.specialization,
+        biography: specialist.biography,
+        experienceYears: specialist.experienceYears,
+        photoFileId: photo.id,
+      },
+    });
+
+    const serviceIds = specialist.serviceSlugs
+      .map((slug) => serviceIdBySlug.get(slug))
+      .filter((id): id is number => Boolean(id));
+
+    if (serviceIds.length) {
+      await prisma.serviceSpecialist.createMany({
+        data: serviceIds.map((serviceId) => ({
+          serviceId,
+          specialistId: created.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+  }
 }
 
 async function seedDevices() {

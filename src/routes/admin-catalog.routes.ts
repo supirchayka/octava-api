@@ -198,6 +198,10 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
               type: 'array',
               items: { type: 'integer' },
             },
+            specialistIds: {
+              type: 'array',
+              items: { type: 'integer' },
+            },
 
             servicePricesExtended: servicePricesExtendedSchema,
             seo: seoSchema,
@@ -241,6 +245,11 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
               nullable: true,
             },
             usedDeviceIds: {
+              type: 'array',
+              items: { type: 'integer' },
+              nullable: true,
+            },
+            specialistIds: {
               type: 'array',
               items: { type: 'integer' },
               nullable: true,
@@ -379,5 +388,114 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
       },
     },
     controller.deleteDevice,
+  );
+
+  /* ========== Specialists ========== */
+
+  app.get(
+    '/admin/catalog/specialists',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.listSpecialists,
+  );
+
+  app.get(
+    '/admin/catalog/specialists/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+    },
+    controller.getSpecialist,
+  );
+
+  app.post(
+    '/admin/catalog/specialists',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          required: [
+            'firstName',
+            'lastName',
+            'specialization',
+            'biography',
+            'experienceYears',
+            'photoFileId',
+          ],
+          properties: {
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            specialization: { type: 'string' },
+            biography: { type: 'string' },
+            experienceYears: { type: 'integer' },
+            photoFileId: { type: 'integer' },
+            serviceIds: {
+              type: 'array',
+              items: { type: 'integer' },
+            },
+          },
+        },
+      },
+    },
+    controller.createSpecialist,
+  );
+
+  app.put(
+    '/admin/catalog/specialists/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          properties: {
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            specialization: { type: 'string' },
+            biography: { type: 'string' },
+            experienceYears: { type: 'integer' },
+            photoFileId: { type: 'integer' },
+            serviceIds: {
+              type: 'array',
+              items: { type: 'integer' },
+            },
+          },
+        },
+      },
+    },
+    controller.updateSpecialist,
+  );
+
+  app.delete(
+    '/admin/catalog/specialists/:id',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+      },
+    },
+    controller.deleteSpecialist,
   );
 }
