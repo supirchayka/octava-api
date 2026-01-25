@@ -1,5 +1,6 @@
 // src/controllers/catalog.controller.ts
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { ServiceCategoryGender } from "@prisma/client";
 import { CatalogService } from "../services/catalog.service";
 
 export class CatalogController {
@@ -13,6 +14,20 @@ export class CatalogController {
 
   getServiceCategories = async (_req: FastifyRequest, reply: FastifyReply) => {
     const categories = await this.service.getServiceCategories();
+    return reply.send(categories);
+  };
+
+  getFemaleServiceCategories = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const categories = await this.service.getServiceCategoriesByGender(
+      ServiceCategoryGender.FEMALE
+    );
+    return reply.send(categories);
+  };
+
+  getMaleServiceCategories = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const categories = await this.service.getServiceCategoriesByGender(
+      ServiceCategoryGender.MALE
+    );
     return reply.send(categories);
   };
 
@@ -31,6 +46,20 @@ export class CatalogController {
   };
 
   // ===== услуга =====
+
+  getFemaleServices = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const services = await this.service.getServicesByGender(
+      ServiceCategoryGender.FEMALE
+    );
+    return reply.send(services);
+  };
+
+  getMaleServices = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const services = await this.service.getServicesByGender(
+      ServiceCategoryGender.MALE
+    );
+    return reply.send(services);
+  };
 
   getService = async (
     request: FastifyRequest<{ Params: { slug: string } }>,
