@@ -1,6 +1,6 @@
 // src/services/catalog.service.ts
 import type { FastifyInstance } from "fastify";
-import { ImagePurpose } from "@prisma/client";
+import { ImagePurpose, ServiceCategoryGender } from "@prisma/client";
 import { buildFileUrl } from "../utils/files";
 
 export class CatalogService {
@@ -62,6 +62,51 @@ export class CatalogService {
     };
   }
 
+  private mapCategorySummary(category: any) {
+    const heroImage = category.images?.find(
+      (img: any) => img.purpose === ImagePurpose.HERO
+    );
+    const galleryImages = category.images
+      ?.filter((img: any) => img.purpose === ImagePurpose.GALLERY)
+      .map((img: any) => this.mapImage(img)!)
+      .filter(Boolean) ?? [];
+
+    return {
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      gender: category.gender,
+      sortOrder: category.sortOrder,
+      servicesCount: category._count?.services ?? 0,
+      seo: this.mapSeo(category.seo ?? null),
+      heroImage: this.mapImage(heroImage) ?? null,
+      galleryImages,
+    };
+  }
+
+  private mapServiceSummary(service: any) {
+    return {
+      id: service.id,
+      slug: service.slug,
+      name: service.name,
+      shortOffer: service.shortOffer,
+      priceFrom: service.priceFrom?.toString() ?? null,
+      durationMinutes: service.durationMinutes,
+      benefits: [service.benefit1, service.benefit2].filter(Boolean),
+      ctaText: service.ctaText,
+      ctaUrl: service.ctaUrl,
+      category: service.category
+        ? {
+            id: service.category.id,
+            slug: service.category.slug,
+            name: service.category.name,
+            gender: service.category.gender,
+          }
+        : undefined,
+    };
+  }
+
   private mapSpecialist(specialist: any) {
     return {
       id: specialist.id,
@@ -99,25 +144,31 @@ export class CatalogService {
       },
     });
 
-    return categories.map((c) => {
-      const heroImage = c.images.find((img: any) => img.purpose === ImagePurpose.HERO);
-      const galleryImages = c.images
-        .filter((img: any) => img.purpose === ImagePurpose.GALLERY)
-        .map((img: any) => this.mapImage(img)!)
-        .filter(Boolean);
+    return categories.map((c) => this.mapCategorySummary(c));
+  }
 
-      return {
-        id: c.id,
-        slug: c.slug,
-        name: c.name,
-        description: c.description,
-        sortOrder: c.sortOrder,
-        servicesCount: c._count.services,
-        seo: this.mapSeo(c.seo),
-        heroImage: this.mapImage(heroImage) ?? null,
-        galleryImages,
-      };
+  async getServiceCategoriesByGender(gender: ServiceCategoryGender) {
+    const categories = await this.app.prisma.serviceCategory.findMany({
+      where: { gender },
+      orderBy: [
+        { sortOrder: "asc" },
+        { name: "asc" },
+      ],
+      include: {
+        images: {
+          include: { file: true },
+          orderBy: { order: "asc" },
+        },
+        seo: {
+          include: { ogImage: true },
+        },
+        _count: {
+          select: { services: true },
+        },
+      },
     });
+
+    return categories.map((c) => this.mapCategorySummary(c));
   }
 
   /**
@@ -146,17 +197,7 @@ export class CatalogService {
       orderBy: { name: "asc" },
     });
 
-    const servicesMapped = services.map((s) => ({
-      id: s.id,
-      slug: s.slug,
-      name: s.name,
-      shortOffer: s.shortOffer,
-      priceFrom: s.priceFrom?.toString() ?? null,
-      durationMinutes: s.durationMinutes,
-      benefits: [s.benefit1, s.benefit2].filter(Boolean),
-      ctaText: s.ctaText,
-      ctaUrl: s.ctaUrl,
-    }));
+    const servicesMapped = services.map((s) => this.mapServiceSummary(s));
 
     const heroImage = category.images.find((img) => img.purpose === ImagePurpose.HERO);
     const galleryImages = category.images
@@ -170,6 +211,7 @@ export class CatalogService {
         slug: category.slug,
         name: category.name,
         description: category.description,
+        gender: category.gender,
         sortOrder: category.sortOrder,
         heroImage: this.mapImage(heroImage) ?? null,
         galleryImages,
@@ -177,6 +219,29 @@ export class CatalogService {
       seo: this.mapSeo(category.seo),
       services: servicesMapped,
     };
+  }
+
+  /**
+   * Список услуг по полу категории.
+   */
+  async getServicesByGender(gender: ServiceCategoryGender) {
+    const services = await this.app.prisma.service.findMany({
+      where: {
+        category: {
+          gender,
+        },
+      },
+      include: {
+        category: true,
+      },
+      orderBy: [
+        { category: { sortOrder: "asc" } },
+        { sortOrder: "asc" },
+        { name: "asc" },
+      ],
+    });
+
+    return services.map((service) => this.mapServiceSummary(service));
   }
 
   /**
