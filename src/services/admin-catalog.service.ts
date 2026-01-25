@@ -1,7 +1,7 @@
 // src/services/admin-catalog.service.ts
 import type { FastifyInstance } from 'fastify';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { ImagePurpose, ServicePriceType } from '@prisma/client';
+import { ImagePurpose, ServiceCategoryGender, ServicePriceType } from '@prisma/client';
 import { buildFileUrl } from '../utils/files';
 import { randomSlugSuffix, slugify } from '../utils/slug';
 
@@ -30,6 +30,7 @@ export type SeoDeviceBody = SeoCommonBody;
 export interface CategoryBody {
   name: string;
   description?: string | null;
+  gender?: ServiceCategoryGender;
   sortOrder?: number;
   heroImageFileId?: number | null;
   seo?: SeoCategoryBody;
@@ -235,6 +236,7 @@ export class AdminCatalogService {
       slug: category.slug,
       name: category.name,
       description: category.description,
+      gender: category.gender,
       sortOrder: category.sortOrder,
       heroImageFileId: heroImage?.fileId ?? null,
       heroImage: this.mapImage(heroImage) ?? null,
@@ -342,6 +344,7 @@ export class AdminCatalogService {
           name: body.name,
           slug,
           description: body.description ?? null,
+          gender: body.gender,
           sortOrder: body.sortOrder ?? 0,
         },
       });
@@ -382,6 +385,7 @@ export class AdminCatalogService {
           ...(body.description !== undefined && {
             description: body.description ?? null,
           }),
+          ...(body.gender !== undefined && { gender: body.gender }),
           ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
         },
       });

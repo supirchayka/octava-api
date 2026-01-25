@@ -80,6 +80,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             name: { type: 'string' },
             description: { type: 'string', nullable: true },
+            gender: { type: 'string', enum: ['FEMALE', 'MALE'] },
             sortOrder: { type: 'integer' },
             heroImageFileId: { type: 'integer', nullable: true },
             seo: seoSchema,
@@ -107,6 +108,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             name: { type: 'string' },
             description: { type: 'string', nullable: true },
+            gender: { type: 'string', enum: ['FEMALE', 'MALE'] },
             sortOrder: { type: 'integer' },
             heroImageFileId: { type: 'integer', nullable: true },
             seo: seoSchema,

@@ -496,6 +496,7 @@ model ServiceCategory {
   name        String
   slug        String   @unique
   description String?
+  gender      ServiceCategoryGender @default(FEMALE)
   sortOrder   Int      @default(0)
   updatedAt   DateTime @updatedAt
 
@@ -503,6 +504,11 @@ model ServiceCategory {
   images         CategoryImage[]
   seo            SeoCategory?
   homeDirections HomeDirection[]
+}
+
+enum ServiceCategoryGender {
+  FEMALE
+  MALE
 }
 
 model CategoryImage {

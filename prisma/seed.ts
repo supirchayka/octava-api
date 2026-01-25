@@ -12,6 +12,7 @@ import {
   Rarity,
   Role,
   ServicePriceType,
+  ServiceCategoryGender,
   StaticPageType,
   PhoneType,
   TrustItemKind,
@@ -522,21 +523,25 @@ async function seedCatalog() {
       name: 'Инъекционные методики',
       slug: 'injekcionnye-metodiki',
       description: 'Препараты с доказанной эффективностью для омоложения и коррекции.',
+      gender: ServiceCategoryGender.FEMALE,
     },
     {
       name: 'Аппаратная косметология',
       slug: 'apparatnaya-kosmetologiya',
       description: 'Технологии для лифтинга, улучшения тона кожи и ремоделирования силуэта.',
+      gender: ServiceCategoryGender.FEMALE,
     },
     {
       name: 'Эстетическая терапия',
       slug: 'esteticheskaya-terapiya',
       description: 'Уходовые процедуры и массажи для восстановления ресурса и сияния кожи.',
+      gender: ServiceCategoryGender.FEMALE,
     },
     {
       name: 'Диагностика и консультации',
       slug: 'diagnostika-i-konsultacii',
       description: 'Стартовый этап: обследования, индивидуальные планы и маршрутизация.',
+      gender: ServiceCategoryGender.FEMALE,
     },
   ];
 
@@ -546,11 +551,13 @@ async function seedCatalog() {
       update: {
         name: cat.name,
         description: cat.description,
+        gender: cat.gender,
       },
       create: {
         name: cat.name,
         slug: cat.slug,
         description: cat.description,
+        gender: cat.gender,
       },
     });
   }
