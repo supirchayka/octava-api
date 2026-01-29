@@ -54,6 +54,7 @@ export interface ServiceBody {
   categoryId: number;
   name: string;
   shortOffer: string;
+  about?: string | null;
   priceFrom?: number | null;
   durationMinutes?: number | null;
   benefit1?: string | null;
@@ -518,6 +519,7 @@ export class AdminCatalogService {
           name: body.name,
           slug,
           shortOffer: body.shortOffer,
+          about: body.about ?? null,
           priceFrom: body.priceFrom ?? null,
           durationMinutes: body.durationMinutes ?? null,
           benefit1: body.benefit1 ?? null,
@@ -649,6 +651,7 @@ export class AdminCatalogService {
       categoryName: service.category.name,
       name: service.name,
       shortOffer: service.shortOffer,
+      about: service.about,
       priceFrom:
         service.priceFrom !== null
           ? Number(service.priceFrom)
@@ -747,6 +750,9 @@ export class AdminCatalogService {
           ...(slugToUpdate && { slug: slugToUpdate }),
           ...(body.shortOffer !== undefined && {
             shortOffer: body.shortOffer,
+          }),
+          ...(body.about !== undefined && {
+            about: body.about ?? null,
           }),
           ...(body.priceFrom !== undefined && {
             priceFrom: body.priceFrom,

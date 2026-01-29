@@ -430,6 +430,7 @@ export class CatalogService {
         id: service.id,
         slug: service.slug,
         name: service.name,
+        about: service.about,
         category: {
           id: service.category.id,
           slug: service.category.slug,

@@ -478,6 +478,7 @@ type ServiceSeed = {
   name: string;
   slug: string;
   shortOffer: string;
+  about?: string;
   priceFrom: string;
   durationMinutes: number;
   benefit1: string;
@@ -580,6 +581,8 @@ async function seedCatalog() {
       name: 'Биоревитализация гиалуроновой кислотой',
       slug: 'biorevitalizaciya-gk',
       shortOffer: 'Гидратация и улучшение качества кожи для равномерного тона и упругости.',
+      about:
+        'Биоревитализация гиалуроновой кислотой насыщает кожу влагой, улучшает плотность и снижает признаки усталости. Процедура помогает восстановить здоровое сияние, поддерживает барьерные функции и подходит для курсового ухода в любое время года.',
       priceFrom: '6500',
       durationMinutes: 60,
       benefit1: 'Восстанавливает уровень увлажнённости и эластичность.',
@@ -1393,12 +1396,17 @@ async function seedCatalog() {
       throw new Error(`Category not found for service ${svc.slug}`);
     }
 
+    const aboutText =
+      svc.about ??
+      `${svc.name} — услуга с индивидуальным подбором протокола, ориентированная на заметный и устойчивый результат. В описании отражены ключевые эффекты, этапы и ожидаемые изменения, чтобы пациент мог заранее понять ход процедуры.`;
+
     const service = await prisma.service.upsert({
       where: { slug: svc.slug },
       update: {
         name: svc.name,
         categoryId,
         shortOffer: svc.shortOffer,
+        about: aboutText,
         priceFrom: svc.priceFrom,
         durationMinutes: svc.durationMinutes,
         benefit1: svc.benefit1,
@@ -1411,6 +1419,7 @@ async function seedCatalog() {
         slug: svc.slug,
         categoryId,
         shortOffer: svc.shortOffer,
+        about: aboutText,
         priceFrom: svc.priceFrom,
         durationMinutes: svc.durationMinutes,
         benefit1: svc.benefit1,
