@@ -536,6 +536,7 @@ model Service {
   slug String @unique
 
   shortOffer      String?
+  about           String?
   priceFrom       Decimal? @db.Decimal(10, 2)
   durationMinutes Int?
   benefit1        String?
