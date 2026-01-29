@@ -14,6 +14,8 @@ export default async function catalogRoutes(app: FastifyInstance) {
   // Услуга
   app.get("/services/female", controller.getFemaleServices);
   app.get("/services/male", controller.getMaleServices);
+  app.get("/services/prices/female", controller.getFemaleServicePrices);
+  app.get("/services/prices/male", controller.getMaleServicePrices);
   app.get("/services/:slug", controller.getService);
 
   // Аппараты

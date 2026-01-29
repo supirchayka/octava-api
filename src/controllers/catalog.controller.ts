@@ -61,6 +61,20 @@ export class CatalogController {
     return reply.send(services);
   };
 
+  getFemaleServicePrices = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const data = await this.service.getServicePricesByGender(
+      ServiceCategoryGender.FEMALE
+    );
+    return reply.send(data);
+  };
+
+  getMaleServicePrices = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const data = await this.service.getServicePricesByGender(
+      ServiceCategoryGender.MALE
+    );
+    return reply.send(data);
+  };
+
   getService = async (
     request: FastifyRequest<{ Params: { slug: string } }>,
     reply: FastifyReply
