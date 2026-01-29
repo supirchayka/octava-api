@@ -107,6 +107,18 @@ export class CatalogService {
     };
   }
 
+  private mapServicePriceEntry(entry: any) {
+    return {
+      id: entry.id,
+      title: entry.title,
+      price: entry.price.toString(),
+      durationMinutes: entry.durationMinutes,
+      type: entry.type,
+      sessionsCount: entry.sessionsCount,
+      order: entry.order,
+    };
+  }
+
   private mapSpecialist(specialist: any) {
     return {
       id: specialist.id,
@@ -242,6 +254,52 @@ export class CatalogService {
     });
 
     return services.map((service) => this.mapServiceSummary(service));
+  }
+
+  /**
+   * Список цен услуг по полу категории: категории -> услуги -> цены.
+   */
+  async getServicePricesByGender(gender: ServiceCategoryGender) {
+    const categories = await this.app.prisma.serviceCategory.findMany({
+      where: { gender },
+      orderBy: [
+        { sortOrder: "asc" },
+        { name: "asc" },
+      ],
+      include: {
+        services: {
+          orderBy: [
+            { sortOrder: "asc" },
+            { name: "asc" },
+          ],
+          include: {
+            pricesExtended: {
+              where: { isActive: true },
+              orderBy: { order: "asc" },
+            },
+          },
+        },
+      },
+    });
+
+    return categories.map((category) => ({
+      id: category.id,
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      sortOrder: category.sortOrder,
+      services: category.services.map((service) => ({
+        id: service.id,
+        slug: service.slug,
+        name: service.name,
+        shortOffer: service.shortOffer,
+        priceFrom: service.priceFrom?.toString() ?? null,
+        durationMinutes: service.durationMinutes,
+        pricesExtended: service.pricesExtended.map((entry) =>
+          this.mapServicePriceEntry(entry)
+        ),
+      })),
+    }));
   }
 
   /**
