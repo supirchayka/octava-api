@@ -43,6 +43,9 @@ CREATE TYPE "Rarity" AS ENUM ('COMMON', 'UNCOMMON', 'RARE');
 -- CreateEnum
 CREATE TYPE "ServicePriceType" AS ENUM ('BASE', 'EXTRA', 'PACKAGE');
 
+-- CreateEnum
+CREATE TYPE "ServiceCategoryGender" AS ENUM ('FEMALE', 'MALE');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
@@ -363,6 +366,7 @@ CREATE TABLE "ServiceCategory" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
+    "gender" "ServiceCategoryGender" NOT NULL DEFAULT 'FEMALE',
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -389,6 +393,7 @@ CREATE TABLE "Service" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "shortOffer" TEXT,
+    "about" TEXT,
     "priceFrom" DECIMAL(10,2),
     "durationMinutes" INTEGER,
     "benefit1" TEXT,
@@ -505,6 +510,29 @@ CREATE TABLE "ServiceImage" (
     "caption" TEXT,
 
     CONSTRAINT "ServiceImage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Specialist" (
+    "id" SERIAL NOT NULL,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "specialization" TEXT NOT NULL,
+    "biography" TEXT NOT NULL,
+    "experienceYears" INTEGER NOT NULL,
+    "photoFileId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Specialist_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ServiceSpecialist" (
+    "serviceId" INTEGER NOT NULL,
+    "specialistId" INTEGER NOT NULL,
+
+    CONSTRAINT "ServiceSpecialist_pkey" PRIMARY KEY ("serviceId","specialistId")
 );
 
 -- CreateTable
@@ -717,6 +745,9 @@ CREATE INDEX "ServicePriceExtended_serviceId_order_idx" ON "ServicePriceExtended
 CREATE INDEX "ServiceImage_serviceId_order_idx" ON "ServiceImage"("serviceId", "order");
 
 -- CreateIndex
+CREATE INDEX "ServiceSpecialist_specialistId_idx" ON "ServiceSpecialist"("specialistId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Device_slug_key" ON "Device"("slug");
 
 -- CreateIndex
@@ -871,6 +902,15 @@ ALTER TABLE "ServiceImage" ADD CONSTRAINT "ServiceImage_serviceId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "ServiceImage" ADD CONSTRAINT "ServiceImage_fileId_fkey" FOREIGN KEY ("fileId") REFERENCES "File"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Specialist" ADD CONSTRAINT "Specialist_photoFileId_fkey" FOREIGN KEY ("photoFileId") REFERENCES "File"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceSpecialist" ADD CONSTRAINT "ServiceSpecialist_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceSpecialist" ADD CONSTRAINT "ServiceSpecialist_specialistId_fkey" FOREIGN KEY ("specialistId") REFERENCES "Specialist"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DeviceCertBadge" ADD CONSTRAINT "DeviceCertBadge_deviceId_fkey" FOREIGN KEY ("deviceId") REFERENCES "Device"("id") ON DELETE CASCADE ON UPDATE CASCADE;
