@@ -182,7 +182,8 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             categoryId: { type: 'integer' },
             name: { type: 'string' },
-            shortOffer: { type: 'string' },
+            shortOffer: { type: 'string', nullable: true },
+            about: { type: 'string', nullable: true },
             priceFrom: { type: 'number', nullable: true },
             durationMinutes: { type: 'integer', nullable: true },
             benefit1: { type: 'string', nullable: true },
@@ -231,7 +232,8 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             categoryId: { type: 'integer' },
             name: { type: 'string' },
-            shortOffer: { type: 'string' },
+            shortOffer: { type: 'string', nullable: true },
+            about: { type: 'string', nullable: true },
             priceFrom: { type: 'number', nullable: true },
             durationMinutes: { type: 'integer', nullable: true },
             benefit1: { type: 'string', nullable: true },

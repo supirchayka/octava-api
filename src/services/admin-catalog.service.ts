@@ -53,7 +53,7 @@ export interface ServicePriceExtendedBody {
 export interface ServiceBody {
   categoryId: number;
   name: string;
-  shortOffer: string;
+  shortOffer: string | null;
   about?: string | null;
   priceFrom?: number | null;
   durationMinutes?: number | null;
