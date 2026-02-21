@@ -48,6 +48,12 @@ export interface ServicePriceExtendedBody {
   isActive?: boolean;
 }
 
+export interface ServiceFaqBody {
+  question: string;
+  answer: string;
+  order?: number | null;
+}
+
   /* ========== Услуга ========== */
 
 export interface ServiceBody {
@@ -70,6 +76,12 @@ export interface ServiceBody {
   specialistIds?: number[];        // какие специалисты привязаны
 
   servicePricesExtended?: ServicePriceExtendedBody[];
+  indications?: string[] | null;
+  contraindications?: string[] | null;
+  preparationSteps?: string[] | null;
+  rehabSteps?: string[] | null;
+  faq?: ServiceFaqBody[] | null;
+  legalDisclaimer?: string | null;
   seo?: SeoServiceBody;
 }
 
@@ -311,6 +323,22 @@ export class AdminCatalogService {
         order: 0,
       },
     });
+  }
+
+  private normalizeTextList(values?: Array<string | null | undefined> | null) {
+    return (values ?? [])
+      .map((value) => (value ?? '').trim())
+      .filter((value) => value.length > 0);
+  }
+
+  private normalizeFaqList(values?: ServiceFaqBody[] | null) {
+    return (values ?? [])
+      .map((item) => ({
+        question: (item.question ?? '').trim(),
+        answer: (item.answer ?? '').trim(),
+        order: item.order ?? null,
+      }))
+      .filter((item) => item.question.length > 0 && item.answer.length > 0);
   }
 
   /* ===================== CATEGORY ===================== */
@@ -599,6 +627,70 @@ export class AdminCatalogService {
         }
       }
 
+      const indications = this.normalizeTextList(body.indications);
+      if (indications.length > 0) {
+        await tx.serviceIndication.createMany({
+          data: indications.map((text) => ({
+            serviceId: service.id,
+            text,
+          })),
+        });
+      }
+
+      const contraindications = this.normalizeTextList(body.contraindications);
+      if (contraindications.length > 0) {
+        await tx.serviceContraindication.createMany({
+          data: contraindications.map((text) => ({
+            serviceId: service.id,
+            text,
+          })),
+        });
+      }
+
+      const preparationSteps = this.normalizeTextList(body.preparationSteps);
+      if (preparationSteps.length > 0) {
+        await tx.servicePreparationStep.createMany({
+          data: preparationSteps.map((text, index) => ({
+            serviceId: service.id,
+            text,
+            order: index,
+          })),
+        });
+      }
+
+      const rehabSteps = this.normalizeTextList(body.rehabSteps);
+      if (rehabSteps.length > 0) {
+        await tx.serviceRehabStep.createMany({
+          data: rehabSteps.map((text, index) => ({
+            serviceId: service.id,
+            text,
+            order: index,
+          })),
+        });
+      }
+
+      const faqItems = this.normalizeFaqList(body.faq);
+      if (faqItems.length > 0) {
+        await tx.serviceFaq.createMany({
+          data: faqItems.map((item, index) => ({
+            serviceId: service.id,
+            question: item.question,
+            answer: item.answer,
+            order: item.order ?? index,
+          })),
+        });
+      }
+
+      const legalDisclaimer = body.legalDisclaimer?.trim();
+      if (legalDisclaimer) {
+        await tx.serviceLegalDisclaimer.create({
+          data: {
+            serviceId: service.id,
+            text: legalDisclaimer,
+          },
+        });
+      }
+
       // SEO
       if (body.seo) {
         await this.upsertServiceSeo(service.id, body.seo, tx);
@@ -634,6 +726,12 @@ export class AdminCatalogService {
         };
       };
       pricesExtended: true;
+      indications: true;
+      contraindications: true;
+      preparationSteps: true;
+      rehabSteps: true;
+      faq: true;
+      legalDisclaimers: true;
       seo: { include: { ogImage: true } };
     };
   }>) {
@@ -681,6 +779,26 @@ export class AdminCatalogService {
         order: price.order,
         isActive: price.isActive,
       })),
+      indications: service.indications.map((item) => item.text),
+      contraindications: service.contraindications.map((item) => item.text),
+      preparationSteps: service.preparationSteps
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((item) => item.text),
+      rehabSteps: service.rehabSteps
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((item) => item.text),
+      faq: service.faq
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((item) => ({
+          id: item.id,
+          question: item.question,
+          answer: item.answer,
+          order: item.order,
+        })),
+      legalDisclaimer: service.legalDisclaimers[0]?.text ?? null,
       seo: this.mapSeoEntity(service.seo),
     };
   }
@@ -701,6 +819,12 @@ export class AdminCatalogService {
           include: { specialist: { include: { photo: true } } },
         },
         pricesExtended: { orderBy: { order: 'asc' } },
+        indications: { orderBy: { id: 'asc' } },
+        contraindications: { orderBy: { id: 'asc' } },
+        preparationSteps: { orderBy: { order: 'asc' } },
+        rehabSteps: { orderBy: { order: 'asc' } },
+        faq: { orderBy: { order: 'asc' } },
+        legalDisclaimers: { orderBy: { id: 'asc' } },
         seo: { include: { ogImage: true } },
       },
     });
@@ -719,6 +843,12 @@ export class AdminCatalogService {
           include: { specialist: { include: { photo: true } } },
         },
         pricesExtended: { orderBy: { order: 'asc' } },
+        indications: { orderBy: { id: 'asc' } },
+        contraindications: { orderBy: { id: 'asc' } },
+        preparationSteps: { orderBy: { order: 'asc' } },
+        rehabSteps: { orderBy: { order: 'asc' } },
+        faq: { orderBy: { order: 'asc' } },
+        legalDisclaimers: { orderBy: { id: 'asc' } },
         seo: { include: { ogImage: true } },
       },
     });
@@ -868,6 +998,88 @@ export class AdminCatalogService {
               },
             });
           }
+        }
+      }
+
+      if (body.indications !== undefined) {
+        await tx.serviceIndication.deleteMany({ where: { serviceId: id } });
+        const indications = this.normalizeTextList(body.indications);
+        if (indications.length > 0) {
+          await tx.serviceIndication.createMany({
+            data: indications.map((text) => ({
+              serviceId: id,
+              text,
+            })),
+          });
+        }
+      }
+
+      if (body.contraindications !== undefined) {
+        await tx.serviceContraindication.deleteMany({ where: { serviceId: id } });
+        const contraindications = this.normalizeTextList(body.contraindications);
+        if (contraindications.length > 0) {
+          await tx.serviceContraindication.createMany({
+            data: contraindications.map((text) => ({
+              serviceId: id,
+              text,
+            })),
+          });
+        }
+      }
+
+      if (body.preparationSteps !== undefined) {
+        await tx.servicePreparationStep.deleteMany({ where: { serviceId: id } });
+        const preparationSteps = this.normalizeTextList(body.preparationSteps);
+        if (preparationSteps.length > 0) {
+          await tx.servicePreparationStep.createMany({
+            data: preparationSteps.map((text, index) => ({
+              serviceId: id,
+              text,
+              order: index,
+            })),
+          });
+        }
+      }
+
+      if (body.rehabSteps !== undefined) {
+        await tx.serviceRehabStep.deleteMany({ where: { serviceId: id } });
+        const rehabSteps = this.normalizeTextList(body.rehabSteps);
+        if (rehabSteps.length > 0) {
+          await tx.serviceRehabStep.createMany({
+            data: rehabSteps.map((text, index) => ({
+              serviceId: id,
+              text,
+              order: index,
+            })),
+          });
+        }
+      }
+
+      if (body.faq !== undefined) {
+        await tx.serviceFaq.deleteMany({ where: { serviceId: id } });
+        const faqItems = this.normalizeFaqList(body.faq);
+        if (faqItems.length > 0) {
+          await tx.serviceFaq.createMany({
+            data: faqItems.map((item, index) => ({
+              serviceId: id,
+              question: item.question,
+              answer: item.answer,
+              order: item.order ?? index,
+            })),
+          });
+        }
+      }
+
+      if (body.legalDisclaimer !== undefined) {
+        await tx.serviceLegalDisclaimer.deleteMany({ where: { serviceId: id } });
+        const legalDisclaimer = body.legalDisclaimer?.trim();
+        if (legalDisclaimer) {
+          await tx.serviceLegalDisclaimer.create({
+            data: {
+              serviceId: id,
+              text: legalDisclaimer,
+            },
+          });
         }
       }
 

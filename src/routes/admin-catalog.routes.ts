@@ -42,6 +42,24 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
     },
   };
 
+  const serviceTextListSchema = {
+    type: 'array',
+    items: { type: 'string' },
+  };
+
+  const serviceFaqSchema = {
+    type: 'array',
+    items: {
+      type: 'object',
+      required: ['question', 'answer'],
+      properties: {
+        question: { type: 'string' },
+        answer: { type: 'string' },
+        order: { type: 'integer', nullable: true },
+      },
+    },
+  };
+
   /* ========== Categories ========== */
 
   app.get(
@@ -207,6 +225,12 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             },
 
             servicePricesExtended: servicePricesExtendedSchema,
+            indications: serviceTextListSchema,
+            contraindications: serviceTextListSchema,
+            preparationSteps: serviceTextListSchema,
+            rehabSteps: serviceTextListSchema,
+            faq: serviceFaqSchema,
+            legalDisclaimer: { type: 'string', nullable: true },
             seo: seoSchema,
           },
         },
@@ -263,6 +287,27 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
               ...servicePricesExtendedSchema,
               nullable: true,
             },
+            indications: {
+              ...serviceTextListSchema,
+              nullable: true,
+            },
+            contraindications: {
+              ...serviceTextListSchema,
+              nullable: true,
+            },
+            preparationSteps: {
+              ...serviceTextListSchema,
+              nullable: true,
+            },
+            rehabSteps: {
+              ...serviceTextListSchema,
+              nullable: true,
+            },
+            faq: {
+              ...serviceFaqSchema,
+              nullable: true,
+            },
+            legalDisclaimer: { type: 'string', nullable: true },
             seo: seoSchema,
           },
         },
