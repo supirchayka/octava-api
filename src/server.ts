@@ -31,9 +31,9 @@ const start = async () => {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  await app.register(fastifyMultipart, {
+await app.register(fastifyMultipart, {
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20 MB
+    fileSize: 25 * 1024 * 1024, // 25 MB
     files: 1,
   },
 });

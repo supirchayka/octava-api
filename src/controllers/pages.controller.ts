@@ -35,6 +35,16 @@ export class PagesController {
     return reply.send(data);
   };
 
+  prices = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const data = await this.service.getPrices();
+    if (!data) {
+      return reply
+        .code(404)
+        .send({ message: "РЎС‚СЂР°РЅРёС†Р° В«Р¦РµРЅС‹В» РЅРµ РЅР°СЃС‚СЂРѕРµРЅР°" });
+    }
+    return reply.send(data);
+  };
+
   orgInfo = async (_req: FastifyRequest, reply: FastifyReply) => {
     const data = await this.service.getOrgInfo();
     if (!data) {

@@ -223,6 +223,17 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
               type: 'array',
               items: { type: 'integer' },
             },
+            specialistLinks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['specialistId'],
+                properties: {
+                  specialistId: { type: 'integer' },
+                  comment: { type: 'string', nullable: true },
+                },
+              },
+            },
 
             servicePricesExtended: servicePricesExtendedSchema,
             indications: serviceTextListSchema,
@@ -280,6 +291,18 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             specialistIds: {
               type: 'array',
               items: { type: 'integer' },
+              nullable: true,
+            },
+            specialistLinks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['specialistId'],
+                properties: {
+                  specialistId: { type: 'integer' },
+                  comment: { type: 'string', nullable: true },
+                },
+              },
               nullable: true,
             },
 
@@ -483,6 +506,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           ],
           properties: {
             firstName: { type: 'string' },
+            middleName: { type: 'string', nullable: true },
             lastName: { type: 'string' },
             specialization: { type: 'string' },
             biography: { type: 'string' },
@@ -515,6 +539,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           type: 'object',
           properties: {
             firstName: { type: 'string' },
+            middleName: { type: 'string', nullable: true },
             lastName: { type: 'string' },
             specialization: { type: 'string' },
             biography: { type: 'string' },

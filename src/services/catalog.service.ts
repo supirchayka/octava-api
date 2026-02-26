@@ -123,6 +123,7 @@ export class CatalogService {
     return {
       id: specialist.id,
       firstName: specialist.firstName,
+      middleName: specialist.middleName ?? null,
       lastName: specialist.lastName,
       specialization: specialist.specialization,
       biography: specialist.biography,
@@ -416,6 +417,7 @@ export class CatalogService {
 
     const specialists = specialistLinks.map((link) => ({
       ...this.mapSpecialist(link.specialist),
+      serviceComment: link.comment ?? null,
       services: link.specialist.services.map((serviceLink: any) => ({
         id: serviceLink.service.id,
         slug: serviceLink.service.slug,

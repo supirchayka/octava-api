@@ -131,6 +131,7 @@ async function seedStaticPages() {
     [StaticPageType.HOME]: '',
     [StaticPageType.ABOUT]: 'about',
     [StaticPageType.CONTACTS]: 'contacts',
+    [StaticPageType.PRICES]: 'prices',
     [StaticPageType.ORG_INFO]: 'org-info',
     [StaticPageType.PERSONAL_DATA_POLICY]: 'personal-data-policy',
     [StaticPageType.PRIVACY_POLICY]: 'privacy-policy',
@@ -148,6 +149,19 @@ async function seedStaticPages() {
       },
     });
   }
+
+  const prices = await prisma.staticPage.findUniqueOrThrow({
+    where: { type: StaticPageType.PRICES },
+  });
+
+  await prisma.pricesPage.upsert({
+    where: { id: prices.id },
+    update: {},
+    create: {
+      id: prices.id,
+      priceListFileId: null,
+    },
+  });
 
   const home = await prisma.staticPage.findUniqueOrThrow({
     where: { type: StaticPageType.HOME },
@@ -254,6 +268,16 @@ async function seedStaticPages() {
         'Мы работаем на стыке медицины и эстетики: команда врачей использует международные стандарты, обучается и внедряет технологии омоложения.',
       howWeAchieveText:
         'Собираем междисциплинарные консилиумы, ведём пациента от первичной консультации до контроля результатов и профилактики.',
+      heroBadgeText: 'Антивозрастная и эстетическая медицина',
+      heroCardText:
+        'Мы работаем не только с внешним проявлением возраста, но и с его причинами. Каждый план лечения — это комбинация диагностики, аппаратных методик и поддержки образа жизни.',
+      howWeAchieveTitle: 'Как мы работаем',
+      howWeAchieveCardText:
+        'OCTAVA — это место, где диагностика, anti-age и эстетика собраны в единую систему. Мы смотрим на здоровье кожи шире, чем просто косметология: учитываем гормональный фон, образ жизни и долгосрочные цели.',
+      factsSectionTitle: 'Наш подход к работе с пациентами',
+      trustSectionTitle: 'Лицензии, сертификаты и награды',
+      trustSectionSubtitle:
+        'Юридическая чистота, контроль качества и признание профессионального сообщества.',
       heroImageId: aboutHeroImage.id,
     },
     create: {
@@ -263,6 +287,16 @@ async function seedStaticPages() {
         'Мы работаем на стыке медицины и эстетики: команда врачей использует международные стандарты, обучается и внедряет технологии омоложения.',
       howWeAchieveText:
         'Собираем междисциплинарные консилиумы, ведём пациента от первичной консультации до контроля результатов и профилактики.',
+      heroBadgeText: 'Антивозрастная и эстетическая медицина',
+      heroCardText:
+        'Мы работаем не только с внешним проявлением возраста, но и с его причинами. Каждый план лечения — это комбинация диагностики, аппаратных методик и поддержки образа жизни.',
+      howWeAchieveTitle: 'Как мы работаем',
+      howWeAchieveCardText:
+        'OCTAVA — это место, где диагностика, anti-age и эстетика собраны в единую систему. Мы смотрим на здоровье кожи шире, чем просто косметология: учитываем гормональный фон, образ жизни и долгосрочные цели.',
+      factsSectionTitle: 'Наш подход к работе с пациентами',
+      trustSectionTitle: 'Лицензии, сертификаты и награды',
+      trustSectionSubtitle:
+        'Юридическая чистота, контроль качества и признание профессионального сообщества.',
       heroImageId: aboutHeroImage.id,
     },
   });
@@ -359,6 +393,7 @@ async function seedStaticPages() {
       email: 'info@octava.ru',
       telegramUrl: 'https://t.me/octava_clinic',
       whatsappUrl: 'https://wa.me/79990000000',
+      maxMessengerUrl: 'https://max.ru',
       addressText: 'г. Москва, ул. Примерная, д. 1',
       yandexMapUrl: 'https://yandex.ru/maps/?example=octava',
     },
@@ -368,6 +403,7 @@ async function seedStaticPages() {
       email: 'info@octava.ru',
       telegramUrl: 'https://t.me/octava_clinic',
       whatsappUrl: 'https://wa.me/79990000000',
+      maxMessengerUrl: 'https://max.ru',
       addressText: 'г. Москва, ул. Примерная, д. 1',
       yandexMapUrl: 'https://yandex.ru/maps/?example=octava',
     },

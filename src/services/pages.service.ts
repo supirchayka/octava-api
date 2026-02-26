@@ -199,6 +199,7 @@ export class PagesService {
         about: {
           include: {
             trustItems: {
+              orderBy: { id: "asc" },
               include: {
                 image: true,
                 file: true,
@@ -281,6 +282,13 @@ export class PagesService {
       },
       trustItems: trust,
       howWeAchieve: page.about.howWeAchieveText,
+      heroBadgeText: page.about.heroBadgeText,
+      heroCardText: page.about.heroCardText,
+      howWeAchieveTitle: page.about.howWeAchieveTitle,
+      howWeAchieveCardText: page.about.howWeAchieveCardText,
+      factsSectionTitle: page.about.factsSectionTitle,
+      trustSectionTitle: page.about.trustSectionTitle,
+      trustSectionSubtitle: page.about.trustSectionSubtitle,
       facts,
       heroCta,
     };
@@ -335,10 +343,57 @@ export class PagesService {
         email: page.contacts.email,
         telegramUrl: page.contacts.telegramUrl,
         whatsappUrl: page.contacts.whatsappUrl,
+        maxMessengerUrl: page.contacts.maxMessengerUrl,
         address: page.contacts.addressText,
         yandexMapUrl: page.contacts.yandexMapUrl,
         workingHours: schedule,
         metroStations: metro,
+      },
+    };
+  }
+
+  // ===== PRICES (/pages/prices) =====
+
+  async getPrices() {
+    const page = await this.app.prisma.staticPage.upsert({
+      where: { type: StaticPageType.PRICES },
+      update: {
+        slug: "prices",
+      },
+      create: {
+        type: StaticPageType.PRICES,
+        slug: "prices",
+      },
+      include: {
+        prices: {
+          include: {
+            priceListFile: true,
+          },
+        },
+        seo: {
+          include: {
+            ogImage: true,
+          },
+        },
+      },
+    });
+
+    return {
+      page: {
+        type: page.type,
+        slug: page.slug,
+      },
+      seo: this.mapSeo(page.seo),
+      prices: {
+        priceListFile: page.prices?.priceListFile
+          ? {
+              id: page.prices.priceListFile.id,
+              url: buildFileUrl(page.prices.priceListFile.path),
+              mime: page.prices.priceListFile.mime,
+              name: page.prices.priceListFile.originalName,
+              sizeBytes: page.prices.priceListFile.sizeBytes,
+            }
+          : null,
       },
     };
   }

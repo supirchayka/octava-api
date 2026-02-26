@@ -1,6 +1,12 @@
 // src/services/admin-pages.service.ts
 import type { FastifyInstance } from 'fastify';
-import { DayGroup, ImagePurpose, StaticPageType } from '@prisma/client';
+import {
+  DayGroup,
+  FileKind,
+  ImagePurpose,
+  StaticPageType,
+  TrustItemKind,
+} from '@prisma/client';
 import { buildFileUrl, isSeedFilePath } from '../utils/files';
 
 export interface SeoBody {
@@ -102,16 +108,34 @@ export interface AboutFactInput {
   order?: number | null;
 }
 
+export interface AboutTrustItemInput {
+  id?: number;
+  kind?: TrustItemKind | null;
+  title?: string | null;
+  number?: string | null;
+  issuedAt?: string | null;
+  issuedBy?: string | null;
+  fileId?: number | null;
+}
+
 export interface AboutPageBody {
   heroTitle?: string | null;
   heroDescription?: string | null;
   howWeAchieveText?: string | null;
+  heroBadgeText?: string | null;
+  heroCardText?: string | null;
+  howWeAchieveTitle?: string | null;
+  howWeAchieveCardText?: string | null;
+  factsSectionTitle?: string | null;
+  trustSectionTitle?: string | null;
+  trustSectionSubtitle?: string | null;
   // hero CTA — отдельная модель AboutHeroCта
   heroCtaTitle?: string | null;
   heroCtaSubtitle?: string | null;
   heroImageFileId?: number | null;
   heroImage?: FileSummary | null;
   facts?: AboutFactInput[];
+  trustItems?: AboutTrustItemInput[];
   seo?: SeoBody;
 }
 
@@ -135,6 +159,7 @@ export interface ContactsPageBody {
   email?: string | null;
   telegramUrl?: string | null;
   whatsappUrl?: string | null;
+  maxMessengerUrl?: string | null;
   addressText?: string | null;
   yandexMapUrl?: string | null;
   workingHours?: ContactsWorkingHourInput[];
@@ -145,6 +170,11 @@ export interface ContactsPageBody {
 export interface PolicyPageBody {
   title?: string | null;
   body?: string | null;
+  seo?: SeoBody;
+}
+
+export interface PricesPageBody {
+  priceListFileId?: number | null;
   seo?: SeoBody;
 }
 
@@ -531,15 +561,26 @@ export class AdminPagesService {
     });
 
     const heroImageForSeo = heroImagesInput?.find((img: any) => img?.fileId);
+    const heroImageFileId = Number(heroImageForSeo?.fileId);
+    const seoEligibleHeroImageId = Number.isFinite(heroImageFileId)
+      ? (
+          await this.app.prisma.file.findUnique({
+            where: { id: heroImageFileId },
+            select: { kind: true },
+          })
+        )?.kind === FileKind.IMAGE
+        ? heroImageFileId
+        : null
+      : null;
     let seoPayload = (input as any)?.seo ?? input.seo;
 
-    if (heroImageForSeo?.fileId) {
+    if (seoEligibleHeroImageId) {
       if (seoPayload) {
         if (seoPayload.ogImageId === undefined) {
-          seoPayload = { ...seoPayload, ogImageId: heroImageForSeo.fileId };
+          seoPayload = { ...seoPayload, ogImageId: seoEligibleHeroImageId };
         }
       } else {
-        seoPayload = { ogImageId: heroImageForSeo.fileId } as SeoBody;
+        seoPayload = { ogImageId: seoEligibleHeroImageId } as SeoBody;
       }
     }
 
@@ -556,6 +597,12 @@ export class AdminPagesService {
           include: {
             heroCta: true,
             heroImage: true,
+            trustItems: {
+              orderBy: { id: 'asc' },
+              include: {
+                file: true,
+              },
+            },
             facts: {
               orderBy: { order: 'asc' },
             },
@@ -573,6 +620,13 @@ export class AdminPagesService {
       heroTitle: page.about?.heroTitle ?? null,
       heroDescription: page.about?.heroDescription ?? null,
       howWeAchieveText: page.about?.howWeAchieveText ?? null,
+      heroBadgeText: page.about?.heroBadgeText ?? null,
+      heroCardText: page.about?.heroCardText ?? null,
+      howWeAchieveTitle: page.about?.howWeAchieveTitle ?? null,
+      howWeAchieveCardText: page.about?.howWeAchieveCardText ?? null,
+      factsSectionTitle: page.about?.factsSectionTitle ?? null,
+      trustSectionTitle: page.about?.trustSectionTitle ?? null,
+      trustSectionSubtitle: page.about?.trustSectionSubtitle ?? null,
       heroCtaTitle: page.about?.heroCta?.title ?? null,
       heroCtaSubtitle: page.about?.heroCta?.subtitle ?? null,
       heroImage: page.about?.heroImage
@@ -589,6 +643,26 @@ export class AdminPagesService {
         text: fact.text,
         order: fact.order,
       })) ?? [],
+      trustItems:
+        page.about?.trustItems.map((item) => ({
+          id: item.id,
+          kind: item.kind,
+          title: item.title,
+          number: item.number,
+          issuedAt: item.issuedAt,
+          issuedBy: item.issuedBy,
+          fileId: item.fileId,
+          file: item.file
+            ? {
+                id: item.file.id,
+                path: item.file.path,
+                mime: item.file.mime,
+                originalName: item.file.originalName,
+                sizeBytes: item.file.sizeBytes,
+                url: buildFileUrl(item.file.path),
+              }
+            : null,
+        })) ?? [],
       seo: this.mapSeoResponse(page.seo),
     } as AboutPageBody;
   }
@@ -608,6 +682,27 @@ export class AdminPagesService {
         ...(input.howWeAchieveText !== undefined && {
           howWeAchieveText: input.howWeAchieveText ?? '',
         }),
+        ...(input.heroBadgeText !== undefined && {
+          heroBadgeText: input.heroBadgeText ?? null,
+        }),
+        ...(input.heroCardText !== undefined && {
+          heroCardText: input.heroCardText ?? null,
+        }),
+        ...(input.howWeAchieveTitle !== undefined && {
+          howWeAchieveTitle: input.howWeAchieveTitle ?? null,
+        }),
+        ...(input.howWeAchieveCardText !== undefined && {
+          howWeAchieveCardText: input.howWeAchieveCardText ?? null,
+        }),
+        ...(input.factsSectionTitle !== undefined && {
+          factsSectionTitle: input.factsSectionTitle ?? null,
+        }),
+        ...(input.trustSectionTitle !== undefined && {
+          trustSectionTitle: input.trustSectionTitle ?? null,
+        }),
+        ...(input.trustSectionSubtitle !== undefined && {
+          trustSectionSubtitle: input.trustSectionSubtitle ?? null,
+        }),
         ...(input.heroImageFileId !== undefined && {
           heroImageId: input.heroImageFileId,
         }),
@@ -621,6 +716,22 @@ export class AdminPagesService {
         howWeAchieveText:
           input.howWeAchieveText ??
           'Подбираем персональные протоколы, используем сертифицированные аппараты и бережные методики.',
+        heroBadgeText:
+          input.heroBadgeText ?? 'Антивозрастная и эстетическая медицина',
+        heroCardText:
+          input.heroCardText ??
+          'Мы работаем не только с внешним проявлением возраста, но и с его причинами. Каждый план лечения — это комбинация диагностики, аппаратных методик и поддержки образа жизни.',
+        howWeAchieveTitle: input.howWeAchieveTitle ?? 'Как мы работаем',
+        howWeAchieveCardText:
+          input.howWeAchieveCardText ??
+          'OCTAVA — это место, где диагностика, anti-age и эстетика собраны в единую систему. Мы смотрим на здоровье кожи шире, чем просто косметология: учитываем гормональный фон, образ жизни и долгосрочные цели.',
+        factsSectionTitle:
+          input.factsSectionTitle ?? 'Наш подход к работе с пациентами',
+        trustSectionTitle:
+          input.trustSectionTitle ?? 'Лицензии, сертификаты и награды',
+        trustSectionSubtitle:
+          input.trustSectionSubtitle ??
+          'Юридическая чистота, контроль качества и признание профессионального сообщества.',
         heroImageId: input.heroImageFileId ?? null,
       },
     });
@@ -679,6 +790,84 @@ export class AdminPagesService {
         await this.app.prisma.aboutFact.createMany({ data: payload });
       }
     }
+
+    if (input.trustItems !== undefined) {
+      const normalized = input.trustItems
+        .map((item) => {
+          const issuedAtRaw = item.issuedAt?.trim();
+          const issuedAt =
+            issuedAtRaw && issuedAtRaw.length
+              ? new Date(issuedAtRaw)
+              : null;
+
+          if (issuedAtRaw && (!issuedAt || Number.isNaN(issuedAt.getTime()))) {
+            throw this.app.httpErrors.badRequest(
+              'Некорректная дата выдачи в блоке документов о клинике',
+            );
+          }
+
+          return {
+            kind: item.kind ?? TrustItemKind.CERTIFICATE,
+            title: item.title?.trim() ?? '',
+            number: item.number?.trim() || null,
+            issuedBy: item.issuedBy?.trim() || null,
+            issuedAt,
+            fileId: item.fileId ?? null,
+          };
+        })
+        .filter(
+          (item) =>
+            item.title.length > 0 ||
+            item.number ||
+            item.issuedBy ||
+            item.issuedAt ||
+            item.fileId,
+        );
+
+      const fileIds = normalized
+        .map((item) => item.fileId)
+        .filter((id): id is number => Number.isFinite(id as number));
+
+      if (fileIds.length) {
+        const files = await this.app.prisma.file.findMany({
+          where: { id: { in: fileIds } },
+          select: { id: true, mime: true },
+        });
+
+        const mimeById = new Map(files.map((file) => [file.id, file.mime]));
+        for (const fileId of fileIds) {
+          const mime = mimeById.get(fileId);
+          if (!mime) {
+            throw this.app.httpErrors.badRequest(
+              `Файл #${fileId} для документа о клинике не найден`,
+            );
+          }
+          if (mime !== 'application/pdf') {
+            throw this.app.httpErrors.badRequest(
+              'Для лицензий и сертификатов разрешены только PDF файлы',
+            );
+          }
+        }
+      }
+
+      await this.app.prisma.aboutTrustItem.deleteMany({
+        where: { aboutPageId: page.id },
+      });
+
+      if (normalized.length) {
+        await this.app.prisma.aboutTrustItem.createMany({
+          data: normalized.map((item) => ({
+            aboutPageId: page.id,
+            kind: item.kind,
+            title: item.title || 'Документ',
+            number: item.number,
+            issuedBy: item.issuedBy,
+            issuedAt: item.issuedAt,
+            fileId: item.fileId,
+          })),
+        });
+      }
+    }
   }
 
   /* ===================== CONTACTS ===================== */
@@ -706,6 +895,7 @@ export class AdminPagesService {
       email: page.contacts?.email ?? null,
       telegramUrl: page.contacts?.telegramUrl ?? null,
       whatsappUrl: page.contacts?.whatsappUrl ?? null,
+      maxMessengerUrl: page.contacts?.maxMessengerUrl ?? null,
       addressText: page.contacts?.addressText ?? null,
       yandexMapUrl: page.contacts?.yandexMapUrl ?? null,
       workingHours:
@@ -745,6 +935,9 @@ export class AdminPagesService {
           ...(input.whatsappUrl !== undefined && {
             whatsappUrl: input.whatsappUrl,
           }),
+          ...(input.maxMessengerUrl !== undefined && {
+            maxMessengerUrl: input.maxMessengerUrl,
+          }),
           ...(input.addressText !== undefined && {
             addressText: input.addressText ?? '',
           }),
@@ -758,6 +951,7 @@ export class AdminPagesService {
           email: input.email ?? null,
           telegramUrl: input.telegramUrl ?? null,
           whatsappUrl: input.whatsappUrl ?? null,
+          maxMessengerUrl: input.maxMessengerUrl ?? null,
           addressText: input.addressText ?? '',
           yandexMapUrl: input.yandexMapUrl ?? '',
         },
@@ -822,6 +1016,87 @@ export class AdminPagesService {
           await tx.contactsMetroStation.createMany({ data: metroPayload });
         }
       }
+    });
+
+    await this.upsertSeo(page.id, input.seo);
+  }
+
+  /* ===================== PRICES ===================== */
+
+  async getPricesPage() {
+    const page = await this.app.prisma.staticPage.upsert({
+      where: { type: StaticPageType.PRICES },
+      update: {
+        slug: 'prices',
+      },
+      create: {
+        type: StaticPageType.PRICES,
+        slug: 'prices',
+      },
+      include: {
+        prices: {
+          include: {
+            priceListFile: true,
+          },
+        },
+        seo: true,
+      },
+    });
+
+    return {
+      priceListFileId: page.prices?.priceListFileId ?? null,
+      priceListFile: page.prices?.priceListFile
+        ? {
+            id: page.prices.priceListFile.id,
+            path: page.prices.priceListFile.path,
+            mime: page.prices.priceListFile.mime,
+            originalName: page.prices.priceListFile.originalName,
+            sizeBytes: page.prices.priceListFile.sizeBytes,
+            url: buildFileUrl(page.prices.priceListFile.path),
+          }
+        : null,
+      seo: this.mapSeoResponse(page.seo),
+    } as PricesPageBody & {
+      priceListFile: (FileSummary & { url: string }) | null;
+    };
+  }
+
+  async updatePricesPage(input: PricesPageBody) {
+    const page = await this.app.prisma.staticPage.upsert({
+      where: { type: StaticPageType.PRICES },
+      update: {
+        slug: 'prices',
+      },
+      create: {
+        type: StaticPageType.PRICES,
+        slug: 'prices',
+      },
+    });
+
+    if (input.priceListFileId !== undefined && input.priceListFileId !== null) {
+      const file = await this.app.prisma.file.findUnique({
+        where: { id: input.priceListFileId },
+        select: { mime: true },
+      });
+      if (!file) {
+        throw this.app.httpErrors.badRequest('PDF файл не найден');
+      }
+      if (file.mime !== 'application/pdf') {
+        throw this.app.httpErrors.badRequest('Допустим только PDF файл');
+      }
+    }
+
+    await this.app.prisma.pricesPage.upsert({
+      where: { id: page.id },
+      update: {
+        ...(input.priceListFileId !== undefined && {
+          priceListFileId: input.priceListFileId,
+        }),
+      },
+      create: {
+        id: page.id,
+        priceListFileId: input.priceListFileId ?? null,
+      },
     });
 
     await this.upsertSeo(page.id, input.seo);

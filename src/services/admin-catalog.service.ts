@@ -54,6 +54,11 @@ export interface ServiceFaqBody {
   order?: number | null;
 }
 
+export interface ServiceSpecialistLinkBody {
+  specialistId: number;
+  comment?: string | null;
+}
+
   /* ========== Услуга ========== */
 
 export interface ServiceBody {
@@ -74,6 +79,7 @@ export interface ServiceBody {
   galleryImageFileIds?: number[] | null; // файлы для галереи
   usedDeviceIds?: number[];        // какие аппараты используются
   specialistIds?: number[];        // какие специалисты привязаны
+  specialistLinks?: ServiceSpecialistLinkBody[]; // специалисты + комментарий по услуге
 
   servicePricesExtended?: ServicePriceExtendedBody[];
   indications?: string[] | null;
@@ -102,6 +108,7 @@ export interface DeviceBody {
 
 export interface SpecialistBody {
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   specialization: string;
   biography: string;
@@ -182,6 +189,7 @@ export class AdminCatalogService {
   private mapSpecialistSummary(specialist: {
     id: number;
     firstName: string;
+    middleName: string | null;
     lastName: string;
     specialization: string;
     experienceYears: number;
@@ -198,6 +206,7 @@ export class AdminCatalogService {
     return {
       id: specialist.id,
       firstName: specialist.firstName,
+      middleName: specialist.middleName,
       lastName: specialist.lastName,
       specialization: specialist.specialization,
       experienceYears: specialist.experienceYears,
@@ -339,6 +348,36 @@ export class AdminCatalogService {
         order: item.order ?? null,
       }))
       .filter((item) => item.question.length > 0 && item.answer.length > 0);
+  }
+
+  private normalizeServiceSpecialistLinks(body: ServiceBody) {
+    const bySpecialistId = new Map<number, { specialistId: number; comment: string | null }>();
+
+    for (const link of body.specialistLinks ?? []) {
+      if (!Number.isInteger(link.specialistId) || link.specialistId <= 0) {
+        continue;
+      }
+
+      const comment = (link.comment ?? '').trim();
+      bySpecialistId.set(link.specialistId, {
+        specialistId: link.specialistId,
+        comment: comment.length > 0 ? comment : null,
+      });
+    }
+
+    for (const specialistId of body.specialistIds ?? []) {
+      if (!Number.isInteger(specialistId) || specialistId <= 0) {
+        continue;
+      }
+      if (!bySpecialistId.has(specialistId)) {
+        bySpecialistId.set(specialistId, {
+          specialistId,
+          comment: null,
+        });
+      }
+    }
+
+    return Array.from(bySpecialistId.values());
   }
 
   /* ===================== CATEGORY ===================== */
@@ -597,12 +636,14 @@ export class AdminCatalogService {
       }
 
       // Специалисты
-      if (body.specialistIds?.length) {
-        for (const specialistId of body.specialistIds) {
+      const specialistLinks = this.normalizeServiceSpecialistLinks(body);
+      if (specialistLinks.length > 0) {
+        for (const link of specialistLinks) {
           await tx.serviceSpecialist.create({
             data: {
               serviceId: service.id,
-              specialistId,
+              specialistId: link.specialistId,
+              comment: link.comment,
             },
           });
         }
@@ -766,9 +807,15 @@ export class AdminCatalogService {
       galleryImages: galleryImages.map((img) => this.mapImage(img)!),
       usedDeviceIds: service.devices.map((device) => device.deviceId),
       specialistIds: service.specialists.map((link) => link.specialistId),
-      specialists: service.specialists.map((link) =>
-        this.mapSpecialistSummary(link.specialist),
-      ),
+      specialists: service.specialists.map((link) => {
+        const specialist = this.mapSpecialistSummary(link.specialist);
+        return {
+          id: specialist.id,
+          specialistId: link.specialistId,
+          comment: link.comment,
+          specialist,
+        };
+      }),
       servicePricesExtended: service.pricesExtended.map((price) => ({
         id: price.id,
         title: price.title,
@@ -963,15 +1010,17 @@ export class AdminCatalogService {
       }
 
       // Специалисты: если массив передан — пересобираем связи
-      if (body.specialistIds !== undefined) {
+      if (body.specialistIds !== undefined || body.specialistLinks !== undefined) {
         await tx.serviceSpecialist.deleteMany({ where: { serviceId: id } });
 
-        if (body.specialistIds?.length) {
-          for (const specialistId of body.specialistIds) {
+        const specialistLinks = this.normalizeServiceSpecialistLinks(body);
+        if (specialistLinks.length > 0) {
+          for (const link of specialistLinks) {
             await tx.serviceSpecialist.create({
               data: {
                 serviceId: id,
-                specialistId,
+                specialistId: link.specialistId,
+                comment: link.comment,
               },
             });
           }
@@ -1379,6 +1428,7 @@ export class AdminCatalogService {
     return {
       id: specialist.id,
       firstName: specialist.firstName,
+      middleName: specialist.middleName,
       lastName: specialist.lastName,
       specialization: specialist.specialization,
       biography: specialist.biography,
@@ -1430,6 +1480,7 @@ export class AdminCatalogService {
       const specialist = await tx.specialist.create({
         data: {
           firstName: body.firstName,
+          middleName: body.middleName?.trim() || null,
           lastName: body.lastName,
           specialization: body.specialization,
           biography: body.biography,
@@ -1472,6 +1523,9 @@ export class AdminCatalogService {
         where: { id },
         data: {
           ...(body.firstName !== undefined && { firstName: body.firstName }),
+          ...(body.middleName !== undefined && {
+            middleName: body.middleName?.trim() || null,
+          }),
           ...(body.lastName !== undefined && { lastName: body.lastName }),
           ...(body.specialization !== undefined && {
             specialization: body.specialization,
@@ -1487,6 +1541,14 @@ export class AdminCatalogService {
       });
 
       if (body.serviceIds !== undefined) {
+        const existingLinks = await tx.serviceSpecialist.findMany({
+          where: { specialistId: id },
+          select: { serviceId: true, comment: true },
+        });
+        const commentByServiceId = new Map(
+          existingLinks.map((link) => [link.serviceId, link.comment ?? null]),
+        );
+
         await tx.serviceSpecialist.deleteMany({
           where: { specialistId: id },
         });
@@ -1497,6 +1559,7 @@ export class AdminCatalogService {
               data: {
                 serviceId,
                 specialistId: id,
+                comment: commentByServiceId.get(serviceId) ?? null,
               },
             });
           }

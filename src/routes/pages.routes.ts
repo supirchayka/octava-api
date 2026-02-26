@@ -14,10 +14,13 @@ export default async function pagesRoutes(app: FastifyInstance) {
   // Контакты
   app.get('/pages/contacts', controller.contacts);
 
+  // Цены
+  app.get('/pages/prices', controller.prices);
+
   // Сведения о мед. организации
   app.get('/pages/org-info', controller.orgInfo);
 
-  // Политика обработки ПДн
+  // Политика обработки ПДН
   app.get('/pages/personal-data-policy', controller.personalDataPolicy);
 
   // Политика конфиденциальности

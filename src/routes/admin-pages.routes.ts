@@ -1,6 +1,6 @@
 // src/routes/admin-pages.routes.ts
 import type { FastifyInstance } from 'fastify';
-import { DayGroup } from '@prisma/client';
+import { DayGroup, TrustItemKind } from '@prisma/client';
 import { AdminPagesController } from '../controllers/admin-pages.controller';
 
 export default async function adminPagesRoutes(app: FastifyInstance) {
@@ -120,20 +120,44 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
         body: {
           type: 'object',
           properties: {
-            heroTitle: { type: 'string' },
-            heroDescription: { type: 'string' },
-            howWeAchieveText: { type: 'string' },
-            heroCtaTitle: { type: 'string' },
-            heroCtaSubtitle: { type: 'string' },
-            heroImageFileId: { type: 'integer' },
+            heroTitle: { type: 'string', nullable: true },
+            heroDescription: { type: 'string', nullable: true },
+            howWeAchieveText: { type: 'string', nullable: true },
+            heroBadgeText: { type: 'string', nullable: true },
+            heroCardText: { type: 'string', nullable: true },
+            howWeAchieveTitle: { type: 'string', nullable: true },
+            howWeAchieveCardText: { type: 'string', nullable: true },
+            factsSectionTitle: { type: 'string', nullable: true },
+            trustSectionTitle: { type: 'string', nullable: true },
+            trustSectionSubtitle: { type: 'string', nullable: true },
+            heroCtaTitle: { type: 'string', nullable: true },
+            heroCtaSubtitle: { type: 'string', nullable: true },
+            heroImageFileId: { type: 'integer', nullable: true },
             facts: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
-                  title: { type: 'string' },
-                  text: { type: 'string' },
+                  title: { type: 'string', nullable: true },
+                  text: { type: 'string', nullable: true },
                   order: { type: 'integer' },
+                },
+              },
+            },
+            trustItems: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  kind: {
+                    type: 'string',
+                    enum: Object.values(TrustItemKind),
+                  },
+                  title: { type: 'string' },
+                  number: { type: 'string', nullable: true },
+                  issuedAt: { type: 'string', nullable: true },
+                  issuedBy: { type: 'string', nullable: true },
+                  fileId: { type: 'integer', nullable: true },
                 },
               },
             },
@@ -178,6 +202,7 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
             email: { type: 'string' },
             telegramUrl: { type: 'string' },
             whatsappUrl: { type: 'string' },
+            maxMessengerUrl: { type: 'string' },
             addressText: { type: 'string' },
             yandexMapUrl: { type: 'string' },
             workingHours: {
@@ -226,6 +251,44 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
       },
     },
     controller.updateContacts,
+  );
+
+  // PRICES
+  app.get(
+    '/admin/pages/prices',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getPrices,
+  );
+
+  app.put(
+    '/admin/pages/prices',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            priceListFileId: { type: 'integer', nullable: true },
+            seo: {
+              type: 'object',
+              properties: {
+                metaTitle: { type: 'string' },
+                metaDescription: { type: 'string' },
+                canonicalUrl: { type: 'string' },
+                robotsIndex: { type: 'boolean' },
+                robotsFollow: { type: 'boolean' },
+                ogTitle: { type: 'string' },
+                ogDescription: { type: 'string' },
+                ogImageId: { type: 'integer' },
+              },
+            },
+          },
+        },
+      },
+    },
+    controller.updatePrices,
   );
 
   // PERSONAL DATA POLICY

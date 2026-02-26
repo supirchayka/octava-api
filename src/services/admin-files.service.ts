@@ -1,4 +1,4 @@
-// src/services/admin-files.service.ts
+﻿// src/services/admin-files.service.ts
 import type { FastifyInstance } from 'fastify';
 import type { MultipartFile } from '@fastify/multipart';
 import { promises as fs } from 'node:fs';
@@ -13,7 +13,7 @@ type BinaryFileMeta = {
 
 export class AdminFilesService {
   private readonly uploadDir: string;
-  private readonly maxSize = 20 * 1024 * 1024; // 20 MB
+  private readonly maxSize = 25 * 1024 * 1024; // 25 MB
 
   constructor(private app: FastifyInstance) {
     this.uploadDir = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
@@ -111,7 +111,7 @@ export class AdminFilesService {
 
   private enforceSize(buffer: Buffer) {
     if (buffer.length > this.maxSize) {
-      throw this.app.httpErrors.badRequest('Размер файла превышает 20 МБ');
+      throw this.app.httpErrors.badRequest('File size exceeds 25 MB');
     }
   }
 
@@ -137,11 +137,11 @@ export class AdminFilesService {
   }
 
   /**
-   * Сохранение файла, полученного через multipart/form-data
+   * РЎРѕС…СЂР°РЅРµРЅРёРµ С„Р°Р№Р»Р°, РїРѕР»СѓС‡РµРЅРЅРѕРіРѕ С‡РµСЂРµР· multipart/form-data
    */
   async saveMultipartFile(file: MultipartFile) {
     if (!file.filename) {
-      throw this.app.httpErrors.badRequest('Некорректное имя файла');
+      throw this.app.httpErrors.badRequest('РќРµРєРѕСЂСЂРµРєС‚РЅРѕРµ РёРјСЏ С„Р°Р№Р»Р°');
     }
 
     const buffer = await file.toBuffer();
@@ -152,7 +152,7 @@ export class AdminFilesService {
   }
 
   /**
-   * Сохранение файла из «сырого» тела запроса (например, fetch + Blob)
+   * РЎРѕС…СЂР°РЅРµРЅРёРµ С„Р°Р№Р»Р° РёР· В«СЃС‹СЂРѕРіРѕВ» С‚РµР»Р° Р·Р°РїСЂРѕСЃР° (РЅР°РїСЂРёРјРµСЂ, fetch + Blob)
    */
   async saveBufferFile(buffer: Buffer, meta: BinaryFileMeta) {
     this.enforceSize(buffer);
@@ -171,3 +171,4 @@ export class AdminFilesService {
     return this.persist(buffer, originalName, mime, ext);
   }
 }
+

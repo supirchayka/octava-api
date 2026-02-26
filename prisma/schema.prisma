@@ -32,6 +32,7 @@ enum StaticPageType {
   HOME
   ABOUT
   CONTACTS
+  PRICES
   ORG_INFO
   PERSONAL_DATA_POLICY
   PRIVACY_POLICY
@@ -178,7 +179,8 @@ model File {
   deviceDocuments       DeviceDocument[]   @relation("DeviceDocumentFile")
   deviceImages          DeviceImage[]      @relation("DeviceImageFile")
   aboutHeroImages       AboutPage[]        @relation("AboutHeroImage")
-  homeSubheroImages    HomePage[]         @relation("HomeSubheroImage")
+  homeSubheroImages     HomePage[]         @relation("HomeSubheroImage")
+  pricesPagePriceLists  PricesPage[]       @relation("PricesPagePriceListFile")
   specialistPhotos      Specialist[]       @relation("SpecialistPhoto")
 }
 
@@ -257,6 +259,7 @@ model StaticPage {
   home     HomePage?
   about    AboutPage?
   contacts ContactsPage?
+  prices   PricesPage?
   policy   PolicyPage?
 
   seo SeoStaticPage?
@@ -319,6 +322,13 @@ model AboutPage {
   heroTitle        String
   heroDescription  String
   howWeAchieveText String
+  heroBadgeText        String?
+  heroCardText         String?
+  howWeAchieveTitle    String?
+  howWeAchieveCardText String?
+  factsSectionTitle    String?
+  trustSectionTitle    String?
+  trustSectionSubtitle String?
 
   heroImageId Int?
   heroImage   File? @relation("AboutHeroImage", fields: [heroImageId], references: [id], onDelete: SetNull)
@@ -373,11 +383,20 @@ model ContactsPage {
   email        String?
   telegramUrl  String?
   whatsappUrl  String?
+  maxMessengerUrl String?
   addressText  String
   yandexMapUrl String
 
   workingHours  ContactsWorkingHours[]
   metroStations ContactsMetroStation[]
+}
+
+model PricesPage {
+  id   Int        @id
+  page StaticPage @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  priceListFileId Int?
+  priceListFile   File? @relation("PricesPagePriceListFile", fields: [priceListFileId], references: [id], onDelete: SetNull)
 }
 
 model ContactsWorkingHours {
@@ -665,6 +684,7 @@ model ServiceImage {
 model Specialist {
   id              Int      @id @default(autoincrement())
   firstName       String
+  middleName      String?
   lastName        String
   specialization  String
   biography       String
@@ -680,6 +700,7 @@ model Specialist {
 model ServiceSpecialist {
   serviceId    Int
   specialistId Int
+  comment      String?
   service      Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
 
