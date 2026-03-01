@@ -12,7 +12,7 @@ export default async function leadsRoutes(app: FastifyInstance) {
       schema: {
         body: {
           type: "object",
-          required: ["name", "phone", "source"],
+          required: ["name", "phone"],
           properties: {
             name: { type: "string", minLength: 1 },
             phone: { type: "string", minLength: 3 },

@@ -16,7 +16,7 @@ export interface BaseLeadBody {
 }
 
 export interface GenericLeadBody extends BaseLeadBody {
-  source: "HOME" | "CONTACTS" | "OTHER";
+  source?: "HOME" | "CONTACTS" | "OTHER";
 }
 
 export interface ServiceLeadBody extends BaseLeadBody {
@@ -88,13 +88,16 @@ export class LeadsService {
   // -------- Публичные формы --------
 
   async createGenericLead(body: GenericLeadBody, ctx: LeadRequestContext) {
-    const sourceTypeMap: Record<GenericLeadBody["source"], LeadSourceType> = {
+    const sourceTypeMap: Record<
+      NonNullable<GenericLeadBody["source"]>,
+      LeadSourceType
+    > = {
       HOME: "HOME",
       CONTACTS: "CONTACTS",
       OTHER: "OTHER",
     };
 
-    const sourceType = sourceTypeMap[body.source];
+    const sourceType = sourceTypeMap[body.source ?? "OTHER"];
 
     const lead = await this.app.prisma.lead.create({
       data: {
