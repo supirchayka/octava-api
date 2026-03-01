@@ -2,6 +2,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { ImagePurpose, ServiceCategoryGender, ServicePriceType } from '@prisma/client';
+import sanitizeHtml from 'sanitize-html';
 import { buildFileUrl } from '../utils/files';
 import { randomSlugSuffix, slugify } from '../utils/slug';
 
@@ -118,6 +119,19 @@ export interface SpecialistBody {
 }
 
 type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
+
+const SPECIALIST_BIOGRAPHY_ALLOWED_TAGS = [
+  'p',
+  'br',
+  'strong',
+  'b',
+  'em',
+  'i',
+  'u',
+  'ul',
+  'ol',
+  'li',
+];
 
 const categoryInclude = {
   images: { include: { file: true } },
@@ -378,6 +392,59 @@ export class AdminCatalogService {
     }
 
     return Array.from(bySpecialistId.values());
+  }
+
+  private looksLikeHtml(value: string) {
+    return /<\/?[a-z][\s\S]*>/i.test(value);
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  private plainTextToHtml(value: string) {
+    const normalized = value.replace(/\r\n/g, '\n');
+    const paragraphs = normalized
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter((paragraph) => paragraph.length > 0)
+      .map((paragraph) => `<p>${this.escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`);
+
+    return paragraphs.join('');
+  }
+
+  private sanitizeSpecialistBiography(value: string) {
+    const trimmed = (value ?? '').trim();
+    if (!trimmed) return '';
+
+    const normalizedInput = this.looksLikeHtml(trimmed)
+      ? trimmed
+      : this.plainTextToHtml(trimmed);
+
+    return sanitizeHtml(normalizedInput, {
+      allowedTags: SPECIALIST_BIOGRAPHY_ALLOWED_TAGS,
+      allowedAttributes: {},
+      disallowedTagsMode: 'discard',
+      parser: { lowerCaseTags: true },
+    })
+      .replace(/&nbsp;/g, ' ')
+      .replace(/<p>\s*<\/p>/g, '')
+      .trim();
+  }
+
+  private ensureSpecialistBiographyNotEmpty(value: string) {
+    const text = sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} })
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!text) {
+      throw this.app.httpErrors.badRequest('Specialist biography must not be empty');
+    }
   }
 
   /* ===================== CATEGORY ===================== */
@@ -1477,13 +1544,16 @@ export class AdminCatalogService {
 
   async createSpecialist(body: SpecialistBody) {
     return this.app.prisma.$transaction(async (tx) => {
+      const biography = this.sanitizeSpecialistBiography(body.biography);
+      this.ensureSpecialistBiographyNotEmpty(biography);
+
       const specialist = await tx.specialist.create({
         data: {
           firstName: body.firstName,
           middleName: body.middleName?.trim() || null,
           lastName: body.lastName,
           specialization: body.specialization,
-          biography: body.biography,
+          biography,
           experienceYears: body.experienceYears,
           photoFileId: body.photoFileId,
         },
@@ -1519,6 +1589,14 @@ export class AdminCatalogService {
         throw this.app.httpErrors.notFound('Специалист не найден');
       }
 
+      const biography =
+        body.biography !== undefined
+          ? this.sanitizeSpecialistBiography(body.biography)
+          : undefined;
+      if (biography !== undefined) {
+        this.ensureSpecialistBiographyNotEmpty(biography);
+      }
+
       await tx.specialist.update({
         where: { id },
         data: {
@@ -1530,7 +1608,7 @@ export class AdminCatalogService {
           ...(body.specialization !== undefined && {
             specialization: body.specialization,
           }),
-          ...(body.biography !== undefined && { biography: body.biography }),
+          ...(biography !== undefined && { biography }),
           ...(body.experienceYears !== undefined && {
             experienceYears: body.experienceYears,
           }),
