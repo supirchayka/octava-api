@@ -1,6 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import type { Prisma, LeadStatus, LeadSourceType } from "@prisma/client";
 
+const TELEGRAM_BOT_LEAD_URL = "http://127.0.0.1:3245/lead";
+const TELEGRAM_BOT_API_KEY =
+  "2057f3744d297f69782e70aef26b8597194d1680cdd0db34262a65948f852d6b";
+
 export interface BaseLeadBody {
   name: string;
   phone: string;
@@ -42,8 +46,44 @@ export interface LeadRequestContext {
   referer?: string;
 }
 
+interface TelegramLeadPayload {
+  name: string;
+  phone: string;
+  message: string;
+}
+
 export class LeadsService {
   constructor(private app: FastifyInstance) {}
+
+  private async sendLeadToTelegramBot(payload: TelegramLeadPayload) {
+    try {
+      const response = await fetch(TELEGRAM_BOT_LEAD_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": TELEGRAM_BOT_API_KEY,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const responseBody = await response.text();
+        this.app.log.error(
+          {
+            statusCode: response.status,
+            responseBody,
+            payload,
+          },
+          "Failed to send lead to telegram bot",
+        );
+      }
+    } catch (error) {
+      this.app.log.error(
+        { err: error, payload },
+        "Failed to send lead to telegram bot",
+      );
+    }
+  }
 
   // -------- Публичные формы --------
 
@@ -56,7 +96,7 @@ export class LeadsService {
 
     const sourceType = sourceTypeMap[body.source];
 
-    return this.app.prisma.lead.create({
+    const lead = await this.app.prisma.lead.create({
       data: {
         sourceType,
         name: body.name,
@@ -70,6 +110,14 @@ export class LeadsService {
         pdnConsent: body.pdnConsent ?? false,
       },
     });
+
+    await this.sendLeadToTelegramBot({
+      name: lead.name,
+      phone: lead.phone,
+      message: lead.message ?? "",
+    });
+
+    return lead;
   }
 
   async createServiceLead(body: ServiceLeadBody, ctx: LeadRequestContext) {
@@ -94,7 +142,7 @@ export class LeadsService {
       );
     }
 
-    return this.app.prisma.lead.create({
+    const lead = await this.app.prisma.lead.create({
       data: {
         sourceType: "SERVICE",
         serviceId,
@@ -109,6 +157,14 @@ export class LeadsService {
         pdnConsent: body.pdnConsent ?? false,
       },
     });
+
+    await this.sendLeadToTelegramBot({
+      name: lead.name,
+      phone: lead.phone,
+      message: lead.message ?? "",
+    });
+
+    return lead;
   }
 
   async createDeviceLead(body: DeviceLeadBody, ctx: LeadRequestContext) {
@@ -133,7 +189,7 @@ export class LeadsService {
       );
     }
 
-    return this.app.prisma.lead.create({
+    const lead = await this.app.prisma.lead.create({
       data: {
         sourceType: "DEVICE",
         deviceId,
@@ -148,6 +204,14 @@ export class LeadsService {
         pdnConsent: body.pdnConsent ?? false,
       },
     });
+
+    await this.sendLeadToTelegramBot({
+      name: lead.name,
+      phone: lead.phone,
+      message: lead.message ?? "",
+    });
+
+    return lead;
   }
 
   // -------- Админка: листинг --------
