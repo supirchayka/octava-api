@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+﻿import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
 import fastifyStatic from '@fastify/static';
@@ -24,9 +24,9 @@ const start = async () => {
     logger: true,
   });
 
-  // плагины
+  // РїР»Р°РіРёРЅС‹
   await app.register(cors, {
-    origin: ['http://localhost:3000', 'http://79.174.86.247:3000', 'http://95.163.226.212:3000'], // админка/фронт
+    origin: ['http://localhost:3000', 'http://79.174.86.247:3000', 'http://95.163.226.212:3000', 'https://clinica-octava.ru', 'https://www.clinica-octava.ru'], // Р°РґРјРёРЅРєР°/С„СЂРѕРЅС‚
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
@@ -42,7 +42,7 @@ await app.register(fastifyMultipart, {
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);
 
-  // раздача файлов (картинки / документы)
+  // СЂР°Р·РґР°С‡Р° С„Р°Р№Р»РѕРІ (РєР°СЂС‚РёРЅРєРё / РґРѕРєСѓРјРµРЅС‚С‹)
   const uploadsDir =
     process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
 
@@ -51,7 +51,7 @@ await app.register(fastifyMultipart, {
     prefix: '/uploads/',
   });
 
-  // роуты
+  // СЂРѕСѓС‚С‹
   await app.register(authRoutes);
   await app.register(orgRoutes);
   await app.register(pagesRoutes);
@@ -71,7 +71,7 @@ await app.register(fastifyMultipart, {
 
   try {
     await app.listen({ port, host });
-    console.log(`🚀 Server listening on http://${host}:${port}`);
+    console.log(`рџљЂ Server listening on http://${host}:${port}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
@@ -79,3 +79,4 @@ await app.register(fastifyMultipart, {
 };
 
 start();
+
