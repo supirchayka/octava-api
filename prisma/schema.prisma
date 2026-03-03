@@ -689,6 +689,7 @@ model Specialist {
   specialization  String
   biography       String
   experienceYears Int
+  sortOrder       Int?
   photoFileId     Int
   photo           File     @relation("SpecialistPhoto", fields: [photoFileId], references: [id], onDelete: Restrict)
   createdAt       DateTime @default(now())

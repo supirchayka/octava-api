@@ -128,6 +128,7 @@ export class CatalogService {
       specialization: specialist.specialization,
       biography: specialist.biography,
       experienceYears: specialist.experienceYears,
+      sortOrder: specialist.sortOrder ?? null,
       photo: this.mapFileMeta(specialist.photo),
     };
   }
@@ -381,6 +382,12 @@ export class CatalogService {
       }),
       this.app.prisma.serviceSpecialist.findMany({
         where: { serviceId: service.id },
+        orderBy: [
+          { specialist: { sortOrder: "asc" } },
+          { specialist: { lastName: "asc" } },
+          { specialist: { firstName: "asc" } },
+          { specialistId: "asc" },
+        ],
         include: {
           specialist: {
             include: {
@@ -497,7 +504,12 @@ export class CatalogService {
 
   async getSpecialistsList() {
     const specialists = await this.app.prisma.specialist.findMany({
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      orderBy: [
+        { sortOrder: "asc" },
+        { lastName: "asc" },
+        { firstName: "asc" },
+        { id: "asc" },
+      ],
       include: {
         photo: true,
         services: {

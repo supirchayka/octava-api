@@ -511,6 +511,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             specialization: { type: 'string' },
             biography: { type: 'string' },
             experienceYears: { type: 'integer' },
+            sortOrder: { type: 'integer', nullable: true },
             photoFileId: { type: 'integer' },
             serviceIds: {
               type: 'array',
@@ -544,6 +545,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             specialization: { type: 'string' },
             biography: { type: 'string' },
             experienceYears: { type: 'integer' },
+            sortOrder: { type: 'integer', nullable: true },
             photoFileId: { type: 'integer' },
             serviceIds: {
               type: 'array',

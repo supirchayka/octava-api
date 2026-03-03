@@ -114,6 +114,7 @@ export interface SpecialistBody {
   specialization: string;
   biography: string;
   experienceYears: number;
+  sortOrder?: number | null;
   photoFileId: number;
   serviceIds?: number[];
 }
@@ -207,6 +208,7 @@ export class AdminCatalogService {
     lastName: string;
     specialization: string;
     experienceYears: number;
+    sortOrder: number | null;
     photo: {
       id: number;
       path: string;
@@ -224,6 +226,7 @@ export class AdminCatalogService {
       lastName: specialist.lastName,
       specialization: specialist.specialization,
       experienceYears: specialist.experienceYears,
+      sortOrder: specialist.sortOrder,
       photo: this.mapFile(specialist.photo),
     };
   }
@@ -809,7 +812,15 @@ export class AdminCatalogService {
         include: {
           pricesExtended: true,
           devices: { include: { device: true } },
-          specialists: { include: { specialist: { include: { photo: true } } } },
+          specialists: {
+            orderBy: [
+              { specialist: { sortOrder: 'asc' } },
+              { specialist: { lastName: 'asc' } },
+              { specialist: { firstName: 'asc' } },
+              { specialistId: 'asc' },
+            ],
+            include: { specialist: { include: { photo: true } } },
+          },
           images: { include: { file: true } },
           seo: true,
         },
@@ -930,6 +941,12 @@ export class AdminCatalogService {
         images: { include: { file: true } },
         devices: true,
         specialists: {
+          orderBy: [
+            { specialist: { sortOrder: 'asc' } },
+            { specialist: { lastName: 'asc' } },
+            { specialist: { firstName: 'asc' } },
+            { specialistId: 'asc' },
+          ],
           include: { specialist: { include: { photo: true } } },
         },
         pricesExtended: { orderBy: { order: 'asc' } },
@@ -954,6 +971,12 @@ export class AdminCatalogService {
         images: { include: { file: true } },
         devices: true,
         specialists: {
+          orderBy: [
+            { specialist: { sortOrder: 'asc' } },
+            { specialist: { lastName: 'asc' } },
+            { specialist: { firstName: 'asc' } },
+            { specialistId: 'asc' },
+          ],
           include: { specialist: { include: { photo: true } } },
         },
         pricesExtended: { orderBy: { order: 'asc' } },
@@ -1209,7 +1232,15 @@ export class AdminCatalogService {
         include: {
           pricesExtended: true,
           devices: { include: { device: true } },
-          specialists: { include: { specialist: { include: { photo: true } } } },
+          specialists: {
+            orderBy: [
+              { specialist: { sortOrder: 'asc' } },
+              { specialist: { lastName: 'asc' } },
+              { specialist: { firstName: 'asc' } },
+              { specialistId: 'asc' },
+            ],
+            include: { specialist: { include: { photo: true } } },
+          },
           images: { include: { file: true } },
           seo: true,
         },
@@ -1500,6 +1531,7 @@ export class AdminCatalogService {
       specialization: specialist.specialization,
       biography: specialist.biography,
       experienceYears: specialist.experienceYears,
+      sortOrder: specialist.sortOrder,
       photoFileId: specialist.photoFileId,
       photo: this.mapFile(specialist.photo),
       serviceIds: specialist.services.map((link) => link.serviceId),
@@ -1514,7 +1546,12 @@ export class AdminCatalogService {
 
   async listSpecialists() {
     const specialists = await this.app.prisma.specialist.findMany({
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
+      orderBy: [
+        { sortOrder: 'asc' },
+        { lastName: 'asc' },
+        { firstName: 'asc' },
+        { id: 'asc' },
+      ],
       include: {
         photo: true,
         services: { include: { service: true } },
@@ -1555,6 +1592,7 @@ export class AdminCatalogService {
           specialization: body.specialization,
           biography,
           experienceYears: body.experienceYears,
+          sortOrder: body.sortOrder ?? null,
           photoFileId: body.photoFileId,
         },
       });
@@ -1611,6 +1649,9 @@ export class AdminCatalogService {
           ...(biography !== undefined && { biography }),
           ...(body.experienceYears !== undefined && {
             experienceYears: body.experienceYears,
+          }),
+          ...(body.sortOrder !== undefined && {
+            sortOrder: body.sortOrder,
           }),
           ...(body.photoFileId !== undefined && {
             photoFileId: body.photoFileId,
