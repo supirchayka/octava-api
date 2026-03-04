@@ -1,7 +1,12 @@
 // src/services/admin-catalog.service.ts
 import type { FastifyInstance } from 'fastify';
 import type { Prisma, PrismaClient } from '@prisma/client';
-import { ImagePurpose, ServiceCategoryGender, ServicePriceType } from '@prisma/client';
+import {
+  FileKind,
+  ImagePurpose,
+  ServiceCategoryGender,
+  ServicePriceType,
+} from '@prisma/client';
 import sanitizeHtml from 'sanitize-html';
 import { buildFileUrl } from '../utils/files';
 import { randomSlugSuffix, slugify } from '../utils/slug';
@@ -122,6 +127,7 @@ export interface SpecialistBody {
 type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
 
 const SPECIALIST_BIOGRAPHY_ALLOWED_TAGS = [
+  'div',
   'p',
   'br',
   'strong',
@@ -351,6 +357,35 @@ export class AdminCatalogService {
     });
   }
 
+  private async normalizeSeoOgImageId(
+    db: PrismaClientLike,
+    ogImageId: number | null | undefined,
+  ) {
+    if (ogImageId === undefined) {
+      return undefined;
+    }
+
+    if (ogImageId === null) {
+      return null;
+    }
+
+    if (!Number.isInteger(ogImageId) || ogImageId <= 0) {
+      return null;
+    }
+
+    const id = ogImageId;
+    const file = await db.file.findUnique({
+      where: { id },
+      select: { id: true, kind: true },
+    });
+
+    if (!file || file.kind !== FileKind.IMAGE) {
+      return null;
+    }
+
+    return file.id;
+  }
+
   private normalizeTextList(values?: Array<string | null | undefined> | null) {
     return (values ?? [])
       .map((value) => (value ?? '').trim())
@@ -552,6 +587,10 @@ export class AdminCatalogService {
     seo: SeoCategoryBody,
     db: PrismaClientLike = this.app.prisma,
   ) {
+    const normalizedOgImageId = await this.normalizeSeoOgImageId(
+      db,
+      seo.ogImageId,
+    );
     const updateData: any = {};
 
     if (seo.metaTitle !== undefined) {
@@ -575,8 +614,8 @@ export class AdminCatalogService {
     if (seo.ogDescription !== undefined) {
       updateData.ogDescription = seo.ogDescription;
     }
-    if (seo.ogImageId !== undefined) {
-      updateData.ogImageId = seo.ogImageId;
+    if (normalizedOgImageId !== undefined) {
+      updateData.ogImageId = normalizedOgImageId;
     }
 
     await db.seoCategory.upsert({
@@ -591,7 +630,7 @@ export class AdminCatalogService {
         robotsFollow: seo.robotsFollow ?? true,
         ogTitle: seo.ogTitle ?? null,
         ogDescription: seo.ogDescription ?? null,
-        ogImageId: seo.ogImageId ?? null,
+        ogImageId: normalizedOgImageId ?? null,
       },
     });
   }
@@ -603,6 +642,10 @@ export class AdminCatalogService {
     seo: SeoServiceBody,
     db: PrismaClientLike = this.app.prisma,
   ) {
+    const normalizedOgImageId = await this.normalizeSeoOgImageId(
+      db,
+      seo.ogImageId,
+    );
     const updateData: any = {};
 
     if (seo.metaTitle !== undefined) {
@@ -626,8 +669,8 @@ export class AdminCatalogService {
     if (seo.ogDescription !== undefined) {
       updateData.ogDescription = seo.ogDescription;
     }
-    if (seo.ogImageId !== undefined) {
-      updateData.ogImageId = seo.ogImageId;
+    if (normalizedOgImageId !== undefined) {
+      updateData.ogImageId = normalizedOgImageId;
     }
 
     await db.seoService.upsert({
@@ -642,7 +685,7 @@ export class AdminCatalogService {
         robotsFollow: seo.robotsFollow ?? true,
         ogTitle: seo.ogTitle ?? null,
         ogDescription: seo.ogDescription ?? null,
-        ogImageId: seo.ogImageId ?? null,
+        ogImageId: normalizedOgImageId ?? null,
       },
     });
   }
@@ -1261,6 +1304,10 @@ export class AdminCatalogService {
     seo: SeoDeviceBody,
     db: PrismaClientLike = this.app.prisma,
   ) {
+    const normalizedOgImageId = await this.normalizeSeoOgImageId(
+      db,
+      seo.ogImageId,
+    );
     const updateData: any = {};
 
     if (seo.metaTitle !== undefined) {
@@ -1284,8 +1331,8 @@ export class AdminCatalogService {
     if (seo.ogDescription !== undefined) {
       updateData.ogDescription = seo.ogDescription;
     }
-    if (seo.ogImageId !== undefined) {
-      updateData.ogImageId = seo.ogImageId;
+    if (normalizedOgImageId !== undefined) {
+      updateData.ogImageId = normalizedOgImageId;
     }
 
     await db.seoDevice.upsert({
@@ -1300,7 +1347,7 @@ export class AdminCatalogService {
         robotsFollow: seo.robotsFollow ?? true,
         ogTitle: seo.ogTitle ?? null,
         ogDescription: seo.ogDescription ?? null,
-        ogImageId: seo.ogImageId ?? null,
+        ogImageId: normalizedOgImageId ?? null,
       },
     });
   }

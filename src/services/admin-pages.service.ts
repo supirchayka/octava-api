@@ -237,11 +237,38 @@ export class AdminPagesService {
     return `${hours}:${minutes}`;
   }
 
+  private async normalizeSeoOgImageId(ogImageId: number | null | undefined) {
+    if (ogImageId === undefined) {
+      return undefined;
+    }
+
+    if (ogImageId === null) {
+      return null;
+    }
+
+    if (!Number.isInteger(ogImageId) || ogImageId <= 0) {
+      return null;
+    }
+
+    const id = ogImageId;
+    const file = await this.app.prisma.file.findUnique({
+      where: { id },
+      select: { id: true, kind: true },
+    });
+
+    if (!file || file.kind !== FileKind.IMAGE) {
+      return null;
+    }
+
+    return file.id;
+  }
+
   /**
    * Общий апсерт SEO-настроек для статической страницы
    */
   private async upsertSeo(pageId: number, seo?: SeoBody) {
     if (!seo) return;
+    const normalizedOgImageId = await this.normalizeSeoOgImageId(seo.ogImageId);
 
     // В update не трогаем поля, которые не пришли
     const updateData: any = {};
@@ -267,8 +294,8 @@ export class AdminPagesService {
     if (seo.ogDescription !== undefined) {
       updateData.ogDescription = seo.ogDescription;
     }
-    if (seo.ogImageId !== undefined) {
-      updateData.ogImageId = seo.ogImageId;
+    if (normalizedOgImageId !== undefined) {
+      updateData.ogImageId = normalizedOgImageId;
     }
 
     await this.app.prisma.seoStaticPage.upsert({
@@ -287,7 +314,7 @@ export class AdminPagesService {
         robotsFollow: seo.robotsFollow ?? true,
         ogTitle: seo.ogTitle ?? null,
         ogDescription: seo.ogDescription ?? null,
-        ogImageId: seo.ogImageId ?? null,
+        ogImageId: normalizedOgImageId ?? null,
       },
     });
   }
