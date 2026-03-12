@@ -553,6 +553,7 @@ model Service {
 
   name String
   slug String @unique
+  serviceCode String @default("АБ123-88") @db.VarChar(255)
 
   shortOffer      String?
   about           String?
@@ -589,6 +590,7 @@ model ServicePriceExtended {
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   title           String
+  serviceCode     String            @default("АБ123-88") @db.VarChar(255)
   price           Decimal          @db.Decimal(10, 2)
   durationMinutes Int?
   type            ServicePriceType @default(BASE)
@@ -702,11 +704,13 @@ model ServiceSpecialist {
   serviceId    Int
   specialistId Int
   comment      String?
+  sortOrder    Int        @default(0)
   service      Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
 
   @@id([serviceId, specialistId])
   @@index([specialistId])
+  @@index([specialistId, sortOrder])
 }
 
 /**

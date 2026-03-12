@@ -3,6 +3,8 @@ import type { FastifyInstance } from "fastify";
 import { ImagePurpose, ServiceCategoryGender } from "@prisma/client";
 import { buildFileUrl } from "../utils/files";
 
+const DEFAULT_SERVICE_CODE = "АБ123-88";
+
 export class CatalogService {
   constructor(private app: FastifyInstance) {}
 
@@ -90,6 +92,7 @@ export class CatalogService {
       id: service.id,
       slug: service.slug,
       name: service.name,
+      serviceCode: service.serviceCode ?? DEFAULT_SERVICE_CODE,
       shortOffer: service.shortOffer,
       priceFrom: service.priceFrom?.toString() ?? null,
       durationMinutes: service.durationMinutes,
@@ -111,6 +114,7 @@ export class CatalogService {
     return {
       id: entry.id,
       title: entry.title,
+      serviceCode: entry.serviceCode ?? DEFAULT_SERVICE_CODE,
       price: entry.price.toString(),
       durationMinutes: entry.durationMinutes,
       type: entry.type,
@@ -208,7 +212,7 @@ export class CatalogService {
 
     const services = await this.app.prisma.service.findMany({
       where: { categoryId: category.id },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
     const servicesMapped = services.map((s) => this.mapServiceSummary(s));
@@ -294,6 +298,7 @@ export class CatalogService {
         id: service.id,
         slug: service.slug,
         name: service.name,
+        serviceCode: service.serviceCode ?? DEFAULT_SERVICE_CODE,
         shortOffer: service.shortOffer,
         priceFrom: service.priceFrom?.toString() ?? null,
         durationMinutes: service.durationMinutes,
@@ -392,7 +397,15 @@ export class CatalogService {
           specialist: {
             include: {
               photo: true,
-              services: { include: { service: true } },
+              services: {
+                orderBy: [
+                  { sortOrder: "asc" },
+                  { service: { sortOrder: "asc" } },
+                  { service: { name: "asc" } },
+                  { serviceId: "asc" },
+                ],
+                include: { service: true },
+              },
             },
           },
         },
@@ -429,8 +442,10 @@ export class CatalogService {
         id: serviceLink.service.id,
         slug: serviceLink.service.slug,
         name: serviceLink.service.name,
+        serviceCode: serviceLink.service.serviceCode ?? DEFAULT_SERVICE_CODE,
         shortOffer: serviceLink.service.shortOffer,
         priceFrom: serviceLink.service.priceFrom?.toString() ?? null,
+        sortOrder: serviceLink.sortOrder,
       })),
     }));
 
@@ -439,6 +454,7 @@ export class CatalogService {
         id: service.id,
         slug: service.slug,
         name: service.name,
+        serviceCode: service.serviceCode ?? DEFAULT_SERVICE_CODE,
         about: service.about,
         category: {
           id: service.category.id,
@@ -449,6 +465,7 @@ export class CatalogService {
       seo: this.mapSeo(seo),
       hero: {
         title: service.name,
+        serviceCode: service.serviceCode ?? DEFAULT_SERVICE_CODE,
         shortOffer: service.shortOffer,
         priceFrom: service.priceFrom?.toString() ?? null,
         durationMinutes: service.durationMinutes,
@@ -469,6 +486,7 @@ export class CatalogService {
       pricesExtended: pricesExtended.map((p) => ({
         id: p.id,
         title: p.title,
+        serviceCode: p.serviceCode ?? DEFAULT_SERVICE_CODE,
         price: p.price.toString(),
         durationMinutes: p.durationMinutes,
         type: p.type,
@@ -513,6 +531,12 @@ export class CatalogService {
       include: {
         photo: true,
         services: {
+          orderBy: [
+            { sortOrder: "asc" },
+            { service: { sortOrder: "asc" } },
+            { service: { name: "asc" } },
+            { serviceId: "asc" },
+          ],
           include: {
             service: true,
           },
@@ -526,8 +550,10 @@ export class CatalogService {
         id: link.service.id,
         slug: link.service.slug,
         name: link.service.name,
+        serviceCode: link.service.serviceCode ?? DEFAULT_SERVICE_CODE,
         shortOffer: link.service.shortOffer,
         priceFrom: link.service.priceFrom?.toString() ?? null,
+        sortOrder: link.sortOrder,
       })),
     }));
   }
@@ -538,6 +564,12 @@ export class CatalogService {
       include: {
         photo: true,
         services: {
+          orderBy: [
+            { sortOrder: "asc" },
+            { service: { sortOrder: "asc" } },
+            { service: { name: "asc" } },
+            { serviceId: "asc" },
+          ],
           include: {
             service: true,
           },
@@ -555,8 +587,10 @@ export class CatalogService {
         id: link.service.id,
         slug: link.service.slug,
         name: link.service.name,
+        serviceCode: link.service.serviceCode ?? DEFAULT_SERVICE_CODE,
         shortOffer: link.service.shortOffer,
         priceFrom: link.service.priceFrom?.toString() ?? null,
+        sortOrder: link.sortOrder,
       })),
     };
   }
@@ -706,6 +740,7 @@ export class CatalogService {
       id: link.service.id,
       slug: link.service.slug,
       name: link.service.name,
+      serviceCode: link.service.serviceCode ?? DEFAULT_SERVICE_CODE,
       shortOffer: link.service.shortOffer,
       priceFrom: link.service.priceFrom?.toString() ?? null,
     }));

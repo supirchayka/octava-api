@@ -46,6 +46,7 @@ export interface CategoryBody {
 
 export interface ServicePriceExtendedBody {
   title: string;
+  serviceCode?: string | null;
   price: number;
   durationMinutes?: number | null;
   type?: ServicePriceType;
@@ -63,6 +64,12 @@ export interface ServiceFaqBody {
 export interface ServiceSpecialistLinkBody {
   specialistId: number;
   comment?: string | null;
+  sortOrder?: number | null;
+}
+
+export interface SpecialistServiceLinkBody {
+  serviceId: number;
+  sortOrder?: number | null;
 }
 
   /* ========== Услуга ========== */
@@ -70,6 +77,7 @@ export interface ServiceSpecialistLinkBody {
 export interface ServiceBody {
   categoryId: number;
   name: string;
+  serviceCode?: string | null;
   shortOffer: string | null;
   about?: string | null;
   priceFrom?: number | null;
@@ -122,6 +130,7 @@ export interface SpecialistBody {
   sortOrder?: number | null;
   photoFileId: number;
   serviceIds?: number[];
+  serviceLinks?: SpecialistServiceLinkBody[];
 }
 
 type PrismaClientLike = PrismaClient | Prisma.TransactionClient;
@@ -139,6 +148,8 @@ const SPECIALIST_BIOGRAPHY_ALLOWED_TAGS = [
   'ol',
   'li',
 ];
+
+const DEFAULT_SERVICE_CODE = 'АБ123-88';
 
 const categoryInclude = {
   images: { include: { file: true } },
@@ -402,8 +413,27 @@ export class AdminCatalogService {
       .filter((item) => item.question.length > 0 && item.answer.length > 0);
   }
 
-  private normalizeServiceSpecialistLinks(body: ServiceBody) {
-    const bySpecialistId = new Map<number, { specialistId: number; comment: string | null }>();
+  private normalizeServiceCode(value?: string | null) {
+    const normalized = (value ?? '').trim();
+    return normalized.length > 0 ? normalized : DEFAULT_SERVICE_CODE;
+  }
+
+  private async normalizeServiceSpecialistLinks(
+    body: ServiceBody,
+    options: {
+      db?: PrismaClientLike;
+      serviceId?: number;
+    } = {},
+  ) {
+    const db = options.db ?? this.app.prisma;
+    const bySpecialistId = new Map<
+      number,
+      {
+        specialistId: number;
+        comment: string | null;
+        sortOrder: number | null;
+      }
+    >();
 
     for (const link of body.specialistLinks ?? []) {
       if (!Number.isInteger(link.specialistId) || link.specialistId <= 0) {
@@ -414,6 +444,10 @@ export class AdminCatalogService {
       bySpecialistId.set(link.specialistId, {
         specialistId: link.specialistId,
         comment: comment.length > 0 ? comment : null,
+        sortOrder:
+          typeof link.sortOrder === 'number' && Number.isInteger(link.sortOrder)
+            ? link.sortOrder
+            : null,
       });
     }
 
@@ -425,11 +459,134 @@ export class AdminCatalogService {
         bySpecialistId.set(specialistId, {
           specialistId,
           comment: null,
+          sortOrder: null,
         });
       }
     }
 
-    return Array.from(bySpecialistId.values());
+    const specialistIds = Array.from(bySpecialistId.keys());
+    if (specialistIds.length === 0) {
+      return [];
+    }
+
+    const existingLinks = await db.serviceSpecialist.findMany({
+      where: {
+        specialistId: {
+          in: specialistIds,
+        },
+      },
+      select: {
+        serviceId: true,
+        specialistId: true,
+        sortOrder: true,
+      },
+    });
+
+    const currentSortOrderBySpecialistId = new Map<number, number>();
+    const maxSortOrderBySpecialistId = new Map<number, number>();
+
+    for (const existingLink of existingLinks) {
+      if (
+        options.serviceId !== undefined &&
+        existingLink.serviceId === options.serviceId &&
+        !currentSortOrderBySpecialistId.has(existingLink.specialistId)
+      ) {
+        currentSortOrderBySpecialistId.set(
+          existingLink.specialistId,
+          existingLink.sortOrder,
+        );
+      }
+
+      const currentMax =
+        maxSortOrderBySpecialistId.get(existingLink.specialistId) ?? -1;
+      maxSortOrderBySpecialistId.set(
+        existingLink.specialistId,
+        Math.max(currentMax, existingLink.sortOrder),
+      );
+    }
+
+    return Array.from(bySpecialistId.values()).map((link) => {
+      if (typeof link.sortOrder === 'number') {
+        return link as typeof link & { sortOrder: number };
+      }
+
+      const currentSortOrder = currentSortOrderBySpecialistId.get(
+        link.specialistId,
+      );
+      if (typeof currentSortOrder === 'number') {
+        return {
+          ...link,
+          sortOrder: currentSortOrder,
+        };
+      }
+
+      const nextSortOrder =
+        (maxSortOrderBySpecialistId.get(link.specialistId) ?? -1) + 1;
+      maxSortOrderBySpecialistId.set(link.specialistId, nextSortOrder);
+
+      return {
+        ...link,
+        sortOrder: nextSortOrder,
+      };
+    });
+  }
+
+  private normalizeSpecialistServiceLinks(
+    body: SpecialistBody,
+    existingLinks: Array<{
+      serviceId: number;
+      comment: string | null;
+      sortOrder: number;
+    }> = [],
+  ) {
+    const commentByServiceId = new Map(
+      existingLinks.map((link) => [link.serviceId, link.comment ?? null]),
+    );
+    const byServiceId = new Map<
+      number,
+      {
+        serviceId: number;
+        comment: string | null;
+        sortOrder: number;
+      }
+    >();
+
+    for (const [index, link] of (body.serviceLinks ?? []).entries()) {
+      if (!Number.isInteger(link.serviceId) || link.serviceId <= 0) {
+        continue;
+      }
+
+      byServiceId.set(link.serviceId, {
+        serviceId: link.serviceId,
+        comment: commentByServiceId.get(link.serviceId) ?? null,
+        sortOrder:
+          typeof link.sortOrder === 'number' && Number.isInteger(link.sortOrder)
+            ? link.sortOrder
+            : index,
+      });
+    }
+
+    for (const [index, serviceId] of (body.serviceIds ?? []).entries()) {
+      if (!Number.isInteger(serviceId) || serviceId <= 0) {
+        continue;
+      }
+
+      if (!byServiceId.has(serviceId)) {
+        byServiceId.set(serviceId, {
+          serviceId,
+          comment: commentByServiceId.get(serviceId) ?? null,
+          sortOrder: index,
+        });
+      }
+    }
+
+    return Array.from(byServiceId.values()).sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) {
+        return a.sortOrder - b.sortOrder;
+      }
+
+      return a.serviceId - b.serviceId;
+    });
   }
 
   private looksLikeHtml(value: string) {
@@ -698,6 +855,7 @@ export class AdminCatalogService {
           categoryId: body.categoryId,
           name: body.name,
           slug,
+          serviceCode: this.normalizeServiceCode(body.serviceCode),
           shortOffer: body.shortOffer,
           about: body.about ?? null,
           priceFrom: body.priceFrom ?? null,
@@ -749,7 +907,9 @@ export class AdminCatalogService {
       }
 
       // Специалисты
-      const specialistLinks = this.normalizeServiceSpecialistLinks(body);
+      const specialistLinks = await this.normalizeServiceSpecialistLinks(body, {
+        db: tx,
+      });
       if (specialistLinks.length > 0) {
         for (const link of specialistLinks) {
           await tx.serviceSpecialist.create({
@@ -757,6 +917,7 @@ export class AdminCatalogService {
               serviceId: service.id,
               specialistId: link.specialistId,
               comment: link.comment,
+              sortOrder: link.sortOrder,
             },
           });
         }
@@ -770,6 +931,7 @@ export class AdminCatalogService {
             data: {
               serviceId: service.id,
               title: p.title,
+              serviceCode: this.normalizeServiceCode(p.serviceCode),
               price: p.price,
               durationMinutes: p.durationMinutes ?? null,
               type: p.type ?? ServicePriceType.EXTRA,
@@ -910,6 +1072,7 @@ export class AdminCatalogService {
       categoryId: service.categoryId,
       categoryName: service.category.name,
       name: service.name,
+      serviceCode: service.serviceCode,
       shortOffer: service.shortOffer,
       about: service.about,
       priceFrom:
@@ -934,12 +1097,14 @@ export class AdminCatalogService {
           id: specialist.id,
           specialistId: link.specialistId,
           comment: link.comment,
+          sortOrder: link.sortOrder,
           specialist,
         };
       }),
       servicePricesExtended: service.pricesExtended.map((price) => ({
         id: price.id,
         title: price.title,
+        serviceCode: price.serviceCode,
         price: Number(price.price),
         durationMinutes: price.durationMinutes,
         type: price.type,
@@ -1058,6 +1223,9 @@ export class AdminCatalogService {
           ...(body.categoryId !== undefined && { categoryId: body.categoryId }),
           ...(body.name !== undefined && { name: body.name }),
           ...(slugToUpdate && { slug: slugToUpdate }),
+          ...(body.serviceCode !== undefined && {
+            serviceCode: this.normalizeServiceCode(body.serviceCode),
+          }),
           ...(body.shortOffer !== undefined && {
             shortOffer: body.shortOffer,
           }),
@@ -1146,7 +1314,10 @@ export class AdminCatalogService {
       if (body.specialistIds !== undefined || body.specialistLinks !== undefined) {
         await tx.serviceSpecialist.deleteMany({ where: { serviceId: id } });
 
-        const specialistLinks = this.normalizeServiceSpecialistLinks(body);
+        const specialistLinks = await this.normalizeServiceSpecialistLinks(body, {
+          db: tx,
+          serviceId: id,
+        });
         if (specialistLinks.length > 0) {
           for (const link of specialistLinks) {
             await tx.serviceSpecialist.create({
@@ -1154,6 +1325,7 @@ export class AdminCatalogService {
                 serviceId: id,
                 specialistId: link.specialistId,
                 comment: link.comment,
+                sortOrder: link.sortOrder,
               },
             });
           }
@@ -1171,6 +1343,7 @@ export class AdminCatalogService {
               data: {
                 serviceId: id,
                 title: p.title,
+                serviceCode: this.normalizeServiceCode(p.serviceCode),
                 price: p.price,
                 durationMinutes: p.durationMinutes ?? null,
                 type: p.type ?? ServicePriceType.EXTRA,
@@ -1584,9 +1757,12 @@ export class AdminCatalogService {
       serviceIds: specialist.services.map((link) => link.serviceId),
       services: specialist.services.map((link) => ({
         id: link.service.id,
+        serviceId: link.serviceId,
         slug: link.service.slug,
         name: link.service.name,
         shortOffer: link.service.shortOffer,
+        serviceCode: link.service.serviceCode,
+        sortOrder: link.sortOrder,
       })),
     };
   }
@@ -1601,7 +1777,15 @@ export class AdminCatalogService {
       ],
       include: {
         photo: true,
-        services: { include: { service: true } },
+        services: {
+          orderBy: [
+            { sortOrder: 'asc' },
+            { service: { sortOrder: 'asc' } },
+            { service: { name: 'asc' } },
+            { serviceId: 'asc' },
+          ],
+          include: { service: true },
+        },
       },
     });
 
@@ -1615,7 +1799,15 @@ export class AdminCatalogService {
       where: { id },
       include: {
         photo: true,
-        services: { include: { service: true } },
+        services: {
+          orderBy: [
+            { sortOrder: 'asc' },
+            { service: { sortOrder: 'asc' } },
+            { service: { name: 'asc' } },
+            { serviceId: 'asc' },
+          ],
+          include: { service: true },
+        },
       },
     });
 
@@ -1644,12 +1836,15 @@ export class AdminCatalogService {
         },
       });
 
-      if (body.serviceIds?.length) {
-        for (const serviceId of body.serviceIds) {
+      const serviceLinks = this.normalizeSpecialistServiceLinks(body);
+      if (serviceLinks.length > 0) {
+        for (const link of serviceLinks) {
           await tx.serviceSpecialist.create({
             data: {
-              serviceId,
+              serviceId: link.serviceId,
               specialistId: specialist.id,
+              comment: link.comment,
+              sortOrder: link.sortOrder,
             },
           });
         }
@@ -1659,7 +1854,15 @@ export class AdminCatalogService {
         where: { id: specialist.id },
         include: {
           photo: true,
-          services: { include: { service: true } },
+          services: {
+            orderBy: [
+              { sortOrder: 'asc' },
+              { service: { sortOrder: 'asc' } },
+              { service: { name: 'asc' } },
+              { serviceId: 'asc' },
+            ],
+            include: { service: true },
+          },
         },
       });
 
@@ -1706,26 +1909,28 @@ export class AdminCatalogService {
         },
       });
 
-      if (body.serviceIds !== undefined) {
+      if (body.serviceIds !== undefined || body.serviceLinks !== undefined) {
         const existingLinks = await tx.serviceSpecialist.findMany({
           where: { specialistId: id },
-          select: { serviceId: true, comment: true },
+          select: { serviceId: true, comment: true, sortOrder: true },
         });
-        const commentByServiceId = new Map(
-          existingLinks.map((link) => [link.serviceId, link.comment ?? null]),
+        const serviceLinks = this.normalizeSpecialistServiceLinks(
+          body,
+          existingLinks,
         );
 
         await tx.serviceSpecialist.deleteMany({
           where: { specialistId: id },
         });
 
-        if (body.serviceIds?.length) {
-          for (const serviceId of body.serviceIds) {
+        if (serviceLinks.length > 0) {
+          for (const link of serviceLinks) {
             await tx.serviceSpecialist.create({
               data: {
-                serviceId,
+                serviceId: link.serviceId,
                 specialistId: id,
-                comment: commentByServiceId.get(serviceId) ?? null,
+                comment: link.comment,
+                sortOrder: link.sortOrder,
               },
             });
           }
@@ -1736,7 +1941,15 @@ export class AdminCatalogService {
         where: { id },
         include: {
           photo: true,
-          services: { include: { service: true } },
+          services: {
+            orderBy: [
+              { sortOrder: 'asc' },
+              { service: { sortOrder: 'asc' } },
+              { service: { name: 'asc' } },
+              { serviceId: 'asc' },
+            ],
+            include: { service: true },
+          },
         },
       });
 

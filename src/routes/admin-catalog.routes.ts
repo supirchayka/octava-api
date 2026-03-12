@@ -29,6 +29,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
       required: ['title', 'price'],
       properties: {
         title: { type: 'string' },
+        serviceCode: { type: 'string', nullable: true },
         price: { type: 'number' },
         durationMinutes: { type: 'integer', nullable: true },
         type: {
@@ -200,6 +201,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             categoryId: { type: 'integer' },
             name: { type: 'string' },
+            serviceCode: { type: 'string', nullable: true },
             shortOffer: { type: 'string', nullable: true },
             about: { type: 'string', nullable: true },
             priceFrom: { type: 'number', nullable: true },
@@ -231,6 +233,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
                 properties: {
                   specialistId: { type: 'integer' },
                   comment: { type: 'string', nullable: true },
+                  sortOrder: { type: 'integer', nullable: true },
                 },
               },
             },
@@ -267,6 +270,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
           properties: {
             categoryId: { type: 'integer' },
             name: { type: 'string' },
+            serviceCode: { type: 'string', nullable: true },
             shortOffer: { type: 'string', nullable: true },
             about: { type: 'string', nullable: true },
             priceFrom: { type: 'number', nullable: true },
@@ -301,6 +305,7 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
                 properties: {
                   specialistId: { type: 'integer' },
                   comment: { type: 'string', nullable: true },
+                  sortOrder: { type: 'integer', nullable: true },
                 },
               },
               nullable: true,
@@ -517,6 +522,17 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
               type: 'array',
               items: { type: 'integer' },
             },
+            serviceLinks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['serviceId'],
+                properties: {
+                  serviceId: { type: 'integer' },
+                  sortOrder: { type: 'integer', nullable: true },
+                },
+              },
+            },
           },
         },
       },
@@ -550,6 +566,18 @@ export default async function adminCatalogRoutes(app: FastifyInstance) {
             serviceIds: {
               type: 'array',
               items: { type: 'integer' },
+            },
+            serviceLinks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['serviceId'],
+                properties: {
+                  serviceId: { type: 'integer' },
+                  sortOrder: { type: 'integer', nullable: true },
+                },
+              },
+              nullable: true,
             },
           },
         },
