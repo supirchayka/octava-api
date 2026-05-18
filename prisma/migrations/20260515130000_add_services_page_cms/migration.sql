@@ -1,5 +1,4 @@
 -- Add CMS page for editable services-section copy.
-ALTER TYPE "StaticPageType" ADD VALUE 'SERVICES';
 
 CREATE TABLE "ServicesPage" (
     "id" INTEGER NOT NULL,
