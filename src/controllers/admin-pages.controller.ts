@@ -11,6 +11,7 @@ import {
   type ContactsPageBody,
   type PolicyPageBody,
   type PricesPageBody,
+  type ServicesPageBody,
 } from '../services/admin-pages.service';
 
 export class AdminPagesController {
@@ -79,6 +80,19 @@ export class AdminPagesController {
     this.ensureEditor(request);
     const body = request.body as PricesPageBody;
     await this.service.updatePricesPage(body);
+    return reply.code(204).send();
+  };
+
+  getServices = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const data = await this.service.getServicesPage();
+    return reply.send(data);
+  };
+
+  updateServices = async (request: FastifyRequest, reply: FastifyReply) => {
+    this.ensureEditor(request);
+    const body = request.body as ServicesPageBody;
+    await this.service.updateServicesPage(body);
     return reply.code(204).send();
   };
 

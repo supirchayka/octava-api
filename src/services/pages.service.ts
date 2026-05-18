@@ -2,6 +2,29 @@
 import type { FastifyInstance } from "fastify";
 import { StaticPageType, DayGroup, ImagePurpose } from "@prisma/client";
 import { buildFileUrl, isSeedFilePath } from "../utils/files";
+import { sanitizeRichText } from "../utils/rich-text";
+
+const SERVICES_PAGE_DEFAULTS = {
+  landingTitle: "Выберите направление",
+  landingDescription:
+    "Перейдите к женским или мужским категориям услуг, чтобы посмотреть подборку процедур.",
+  femaleCardTitle: "Женщины",
+  femaleCardDescription:
+    "Категории эстетического и оздоровительного ухода, собранные для женских запросов.",
+  maleCardTitle: "Мужчины",
+  maleCardDescription:
+    "Процедуры и консультации, разработанные для мужских направлений и задач.",
+  femaleTitle: "Почему женщины выбирают нас?",
+  femaleDescription:
+    "Собрали для вас направления, где заботимся о красоте, здоровье и комфорте с персональным подходом и вниманием к деталям.",
+  maleTitle: "Почему мужчины выбирают нас?",
+  maleDescription:
+    "Подготовили направления с эффективными решениями для мужского ухода — от эстетики до консультаций специалистов.",
+};
+
+const SERVICES_PAGE_TEXT_FIELDS = Object.keys(
+  SERVICES_PAGE_DEFAULTS,
+) as Array<keyof typeof SERVICES_PAGE_DEFAULTS>;
 
 export class PagesService {
   constructor(private app: FastifyInstance) {}
@@ -131,6 +154,11 @@ export class PagesService {
       .map((g) => ({
         id: g.id,
         url: buildFileUrl(g.file.path),
+        mime: g.file.mime,
+        fileId: g.fileId,
+        originalName: g.file.originalName,
+        sizeBytes: g.file.sizeBytes,
+        heroVariant: (g as any).heroVariant ?? null,
         alt: g.alt ?? g.file.originalName,
         caption: g.caption,
         order: g.order,
@@ -184,7 +212,7 @@ export class PagesService {
           : null,
       },
       interior: {
-        text: page.home.interiorText,
+        text: sanitizeRichText(page.home.interiorText) || null,
         images: interiorImages,
       },
     };
@@ -344,10 +372,45 @@ export class PagesService {
         telegramUrl: page.contacts.telegramUrl,
         whatsappUrl: page.contacts.whatsappUrl,
         maxMessengerUrl: page.contacts.maxMessengerUrl,
-        address: page.contacts.addressText,
+        address: sanitizeRichText(page.contacts.addressText) || null,
         yandexMapUrl: page.contacts.yandexMapUrl,
         workingHours: schedule,
         metroStations: metro,
+      },
+    };
+  }
+
+  // ===== SERVICES (/pages/services) =====
+
+  async getServicesPage() {
+    const page = await this.app.prisma.staticPage.findUnique({
+      where: { type: StaticPageType.SERVICES },
+      include: {
+        services: true,
+        seo: {
+          include: {
+            ogImage: true,
+          },
+        },
+      },
+    });
+
+    if (!page) return null;
+
+    return {
+      page: {
+        type: page.type,
+        slug: page.slug,
+      },
+      seo: this.mapSeo(page.seo),
+      services: {
+        ...SERVICES_PAGE_TEXT_FIELDS.reduce(
+          (data, field) => {
+            data[field] = page.services?.[field] ?? SERVICES_PAGE_DEFAULTS[field];
+            return data;
+          },
+          {} as Record<keyof typeof SERVICES_PAGE_DEFAULTS, string>,
+        ),
       },
     };
   }

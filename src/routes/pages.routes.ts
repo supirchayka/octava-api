@@ -13,6 +13,7 @@ export default async function pagesRoutes(app: FastifyInstance) {
 
   // Контакты
   app.get('/pages/contacts', controller.contacts);
+  app.get('/pages/services', controller.services);
 
   // Цены
   app.get('/pages/prices', controller.prices);

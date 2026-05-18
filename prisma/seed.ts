@@ -131,6 +131,7 @@ async function seedStaticPages() {
     [StaticPageType.HOME]: '',
     [StaticPageType.ABOUT]: 'about',
     [StaticPageType.CONTACTS]: 'contacts',
+    [StaticPageType.SERVICES]: 'services',
     [StaticPageType.PRICES]: 'prices',
     [StaticPageType.ORG_INFO]: 'org-info',
     [StaticPageType.PERSONAL_DATA_POLICY]: 'personal-data-policy',
@@ -160,6 +161,33 @@ async function seedStaticPages() {
     create: {
       id: prices.id,
       priceListFileId: null,
+    },
+  });
+
+  const services = await prisma.staticPage.findUniqueOrThrow({
+    where: { type: StaticPageType.SERVICES },
+  });
+
+  await prisma.servicesPage.upsert({
+    where: { id: services.id },
+    update: {},
+    create: {
+      id: services.id,
+      landingTitle: 'Выберите направление',
+      landingDescription:
+        'Перейдите к женским или мужским категориям услуг, чтобы посмотреть подборку процедур.',
+      femaleCardTitle: 'Женщины',
+      femaleCardDescription:
+        'Категории эстетического и оздоровительного ухода, собранные для женских запросов.',
+      maleCardTitle: 'Мужчины',
+      maleCardDescription:
+        'Процедуры и консультации, разработанные для мужских направлений и задач.',
+      femaleTitle: 'Почему женщины выбирают нас?',
+      femaleDescription:
+        'Собрали для вас направления, где заботимся о красоте, здоровье и комфорте с персональным подходом и вниманием к деталям.',
+      maleTitle: 'Почему мужчины выбирают нас?',
+      maleDescription:
+        'Подготовили направления с эффективными решениями для мужского ухода — от эстетики до консультаций специалистов.',
     },
   });
 
@@ -214,11 +242,12 @@ async function seedStaticPages() {
     data: {
       homePageId: home.id,
       purpose: ImagePurpose.HERO,
+      heroVariant: 'DESKTOP',
       fileId: homeHeroImage.id,
       alt: 'Клиника OCTAVA — главный баннер',
       caption: 'Герой и OG для главной страницы',
       order: 0,
-    },
+    } as any,
   });
 
   await prisma.seoStaticPage.upsert({

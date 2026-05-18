@@ -32,6 +32,7 @@ enum StaticPageType {
   HOME
   ABOUT
   CONTACTS
+  SERVICES
   PRICES
   ORG_INFO
   PERSONAL_DATA_POLICY
@@ -55,6 +56,11 @@ enum ImagePurpose {
   HERO
   GALLERY
   INLINE
+}
+
+enum HomeHeroMediaVariant {
+  DESKTOP
+  MOBILE
 }
 
 enum LeadSourceType {
@@ -259,10 +265,29 @@ model StaticPage {
   home     HomePage?
   about    AboutPage?
   contacts ContactsPage?
+  services ServicesPage?
   prices   PricesPage?
   policy   PolicyPage?
 
   seo SeoStaticPage?
+}
+
+model ServicesPage {
+  id   Int        @id
+  page StaticPage @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  landingTitle       String
+  landingDescription String
+
+  femaleCardTitle       String
+  femaleCardDescription String
+  maleCardTitle         String
+  maleCardDescription   String
+
+  femaleTitle       String
+  femaleDescription String
+  maleTitle         String
+  maleDescription   String
 }
 
 model HomePage {
@@ -308,11 +333,13 @@ model HomeGalleryImage {
   file   File @relation("HomeGalleryImageFile", fields: [fileId], references: [id], onDelete: Restrict)
 
   purpose ImagePurpose // HERO или GALLERY (интерьер)
-  order   Int
-  alt     String?
-  caption String?
+  heroVariant HomeHeroMediaVariant?
+  order       Int
+  alt         String?
+  caption     String?
 
   @@index([homePageId, order])
+  @@index([homePageId, purpose, heroVariant])
 }
 
 model AboutPage {

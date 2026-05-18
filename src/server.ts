@@ -42,6 +42,14 @@ await app.register(fastifyMultipart, {
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);
 
+  app.addHook('onSend', async (_request, reply, payload) => {
+    reply.header(
+      'X-Robots-Tag',
+      'noindex, nofollow, noarchive, nosnippet',
+    );
+    return payload;
+  });
+
   // СЂР°Р·РґР°С‡Р° С„Р°Р№Р»РѕРІ (РєР°СЂС‚РёРЅРєРё / РґРѕРєСѓРјРµРЅС‚С‹)
   const uploadsDir =
     process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads');
@@ -63,6 +71,11 @@ await app.register(fastifyMultipart, {
   await app.register(adminOrgRoutes);
   await app.register(adminPagesRoutes);
   await app.register(adminFilesRoutes);
+
+  app.get('/robots.txt', async (_request, reply) => {
+    reply.type('text/plain; charset=utf-8');
+    return reply.send('User-agent: *\nDisallow: /\n');
+  });
 
   app.get('/health', async () => ({ status: 'ok' }));
 

@@ -50,6 +50,11 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
                 type: 'object',
                 properties: {
                   fileId: { type: 'integer' },
+                  heroVariant: {
+                    type: 'string',
+                    enum: ['DESKTOP', 'MOBILE'],
+                    nullable: true,
+                  },
                   alt: { type: 'string' },
                   caption: { type: 'string' },
                   order: { type: 'integer' },
@@ -251,6 +256,53 @@ export default async function adminPagesRoutes(app: FastifyInstance) {
       },
     },
     controller.updateContacts,
+  );
+
+  // SERVICES
+  app.get(
+    '/admin/pages/services',
+    {
+      preHandler: [app.authenticate],
+    },
+    controller.getServices,
+  );
+
+  app.put(
+    '/admin/pages/services',
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        body: {
+          type: 'object',
+          properties: {
+            landingTitle: { type: 'string', nullable: true },
+            landingDescription: { type: 'string', nullable: true },
+            femaleCardTitle: { type: 'string', nullable: true },
+            femaleCardDescription: { type: 'string', nullable: true },
+            maleCardTitle: { type: 'string', nullable: true },
+            maleCardDescription: { type: 'string', nullable: true },
+            femaleTitle: { type: 'string', nullable: true },
+            femaleDescription: { type: 'string', nullable: true },
+            maleTitle: { type: 'string', nullable: true },
+            maleDescription: { type: 'string', nullable: true },
+            seo: {
+              type: 'object',
+              properties: {
+                metaTitle: { type: 'string' },
+                metaDescription: { type: 'string' },
+                canonicalUrl: { type: 'string' },
+                robotsIndex: { type: 'boolean' },
+                robotsFollow: { type: 'boolean' },
+                ogTitle: { type: 'string' },
+                ogDescription: { type: 'string' },
+                ogImageId: { type: 'integer', nullable: true },
+              },
+            },
+          },
+        },
+      },
+    },
+    controller.updateServices,
   );
 
   // PRICES

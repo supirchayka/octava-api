@@ -8,6 +8,7 @@ import {
   TrustItemKind,
 } from '@prisma/client';
 import { buildFileUrl, isSeedFilePath } from '../utils/files';
+import { sanitizeRichText } from '../utils/rich-text';
 
 export interface SeoBody {
   metaTitle?: string | null;
@@ -30,6 +31,7 @@ export interface FileSummary {
 
 export interface HomeHeroImageInput {
   fileId: number;
+  heroVariant?: 'DESKTOP' | 'MOBILE' | null;
   alt?: string | null;
   caption?: string | null;
   order?: number | null;
@@ -75,6 +77,10 @@ interface AdminHomeHeroImage {
   id: number;
   fileId: number;
   url: string;
+  mime: string | null;
+  sizeBytes: number | null;
+  originalName: string | null;
+  heroVariant: 'DESKTOP' | 'MOBILE' | null;
   alt: string | null;
   caption: string | null;
   order: number | null;
@@ -178,6 +184,42 @@ export interface PricesPageBody {
   seo?: SeoBody;
 }
 
+export interface ServicesPageBody {
+  landingTitle?: string | null;
+  landingDescription?: string | null;
+  femaleCardTitle?: string | null;
+  femaleCardDescription?: string | null;
+  maleCardTitle?: string | null;
+  maleCardDescription?: string | null;
+  femaleTitle?: string | null;
+  femaleDescription?: string | null;
+  maleTitle?: string | null;
+  maleDescription?: string | null;
+  seo?: SeoBody;
+}
+
+const SERVICES_PAGE_DEFAULTS = {
+  landingTitle: 'Выберите направление',
+  landingDescription:
+    'Перейдите к женским или мужским категориям услуг, чтобы посмотреть подборку процедур.',
+  femaleCardTitle: 'Женщины',
+  femaleCardDescription:
+    'Категории эстетического и оздоровительного ухода, собранные для женских запросов.',
+  maleCardTitle: 'Мужчины',
+  maleCardDescription:
+    'Процедуры и консультации, разработанные для мужских направлений и задач.',
+  femaleTitle: 'Почему женщины выбирают нас?',
+  femaleDescription:
+    'Собрали для вас направления, где заботимся о красоте, здоровье и комфорте с персональным подходом и вниманием к деталям.',
+  maleTitle: 'Почему мужчины выбирают нас?',
+  maleDescription:
+    'Подготовили направления с эффективными решениями для мужского ухода — от эстетики до консультаций специалистов.',
+} satisfies Omit<ServicesPageBody, 'seo'>;
+
+const SERVICES_PAGE_TEXT_FIELDS = Object.keys(
+  SERVICES_PAGE_DEFAULTS,
+) as Array<keyof typeof SERVICES_PAGE_DEFAULTS>;
+
 /**
  * Админ-управление статическими страницами и их SEO.
  */
@@ -202,6 +244,42 @@ export class AdminPagesService {
       ogDescription: seo.ogDescription,
       ogImageId: seo.ogImageId,
     } as SeoBody;
+  }
+
+  private buildServicesPageCreateData(input: ServicesPageBody = {}) {
+    return SERVICES_PAGE_TEXT_FIELDS.reduce(
+      (data, field) => {
+        const value = input[field];
+        data[field] =
+          value === undefined
+            ? SERVICES_PAGE_DEFAULTS[field]
+            : (value ?? '').trim();
+        return data;
+      },
+      {} as Record<keyof typeof SERVICES_PAGE_DEFAULTS, string>,
+    );
+  }
+
+  private buildServicesPageUpdateData(input: ServicesPageBody) {
+    return SERVICES_PAGE_TEXT_FIELDS.reduce(
+      (data, field) => {
+        if (input[field] !== undefined) {
+          data[field] = (input[field] ?? '').trim();
+        }
+        return data;
+      },
+      {} as Partial<Record<keyof typeof SERVICES_PAGE_DEFAULTS, string>>,
+    );
+  }
+
+  private mapServicesPageCopy(source?: ServicesPageBody | null) {
+    return SERVICES_PAGE_TEXT_FIELDS.reduce(
+      (data, field) => {
+        data[field] = source?.[field] ?? SERVICES_PAGE_DEFAULTS[field];
+        return data;
+      },
+      {} as Record<keyof typeof SERVICES_PAGE_DEFAULTS, string>,
+    );
   }
 
   private timeStringToMinutes(value?: string | null) {
@@ -261,6 +339,14 @@ export class AdminPagesService {
     }
 
     return file.id;
+  }
+
+  private normalizeHomeHeroMediaVariant(value: unknown, fallbackOrder: number) {
+    if (value === 'MOBILE' || value === 'DESKTOP') {
+      return value;
+    }
+
+    return fallbackOrder === 1 ? 'MOBILE' : 'DESKTOP';
   }
 
   /**
@@ -363,6 +449,10 @@ export class AdminPagesService {
         id: img.id,
         fileId: img.fileId,
         url: img.file ? buildFileUrl(img.file.path) : '',
+        mime: img.file?.mime ?? null,
+        sizeBytes: img.file?.sizeBytes ?? null,
+        originalName: img.file?.originalName ?? null,
+        heroVariant: (img as any).heroVariant ?? null,
         alt: img.alt ?? img.file?.originalName ?? null,
         caption: img.caption ?? null,
         order: img.order,
@@ -383,6 +473,10 @@ export class AdminPagesService {
         id: img.id,
         fileId: img.fileId,
         url: img.file ? buildFileUrl(img.file.path) : '',
+        mime: img.file?.mime ?? null,
+        sizeBytes: img.file?.sizeBytes ?? null,
+        originalName: img.file?.originalName ?? null,
+        heroVariant: null,
         alt: img.alt ?? img.file?.originalName ?? null,
         caption: img.caption ?? null,
         order: img.order,
@@ -411,7 +505,7 @@ export class AdminPagesService {
           : null,
       },
       interior: {
-        text: page.home?.interiorText ?? null,
+        text: sanitizeRichText(page.home?.interiorText) || null,
         images: interiorImages,
       },
       directions:
@@ -459,6 +553,10 @@ export class AdminPagesService {
 
     const heroImagesInput =
       input.heroImages ?? heroBlock.images ?? heroBlock.heroImages;
+    const interiorText =
+      input.interiorText !== undefined
+        ? sanitizeRichText(input.interiorText)
+        : undefined;
 
     await this.app.prisma.$transaction(async (tx) => {
       await tx.homePage.upsert({
@@ -485,8 +583,8 @@ export class AdminPagesService {
           ...(hasSubheroImageInput && {
             subheroImageId,
           }),
-          ...(input.interiorText !== undefined && {
-            interiorText: input.interiorText ?? '',
+          ...(interiorText !== undefined && {
+            interiorText,
           }),
         } as any,
         create: {
@@ -504,7 +602,7 @@ export class AdminPagesService {
             'Индивидуальные протоколы и лучшие аппараты',
           subheroImageId,
           interiorText:
-            input.interiorText ??
+            interiorText ??
             'Интерьер и атмосфера клиники создают ощущение уюта и доверия.',
         },
       });
@@ -513,18 +611,24 @@ export class AdminPagesService {
         await tx.homeGalleryImage.deleteMany({
           where: { homePageId: page.id, purpose: ImagePurpose.HERO },
         });
-        const heroImage = heroImagesInput.find((img: any) => img?.fileId);
-        if (heroImage) {
-          await tx.homeGalleryImage.create({
-            data: {
-              homePageId: page.id,
-              purpose: ImagePurpose.HERO,
-              fileId: heroImage.fileId,
-              order: heroImage.order ?? 0,
-              alt: heroImage.alt ?? null,
-              caption: heroImage.caption ?? null,
-            },
-          });
+
+        const heroPayload = heroImagesInput
+          .filter((img: any) => img?.fileId)
+          .map((img: any, index: number) => ({
+            homePageId: page.id,
+            purpose: ImagePurpose.HERO,
+            fileId: img.fileId,
+            order: img.order ?? index,
+            heroVariant: this.normalizeHomeHeroMediaVariant(
+              img.heroVariant,
+              img.order ?? index,
+            ),
+            alt: img.alt ?? null,
+            caption: img.caption ?? null,
+          }));
+
+        if (heroPayload.length) {
+          await tx.homeGalleryImage.createMany({ data: heroPayload as any });
         }
       }
 
@@ -923,7 +1027,7 @@ export class AdminPagesService {
       telegramUrl: page.contacts?.telegramUrl ?? null,
       whatsappUrl: page.contacts?.whatsappUrl ?? null,
       maxMessengerUrl: page.contacts?.maxMessengerUrl ?? null,
-      addressText: page.contacts?.addressText ?? null,
+      addressText: sanitizeRichText(page.contacts?.addressText) || null,
       yandexMapUrl: page.contacts?.yandexMapUrl ?? null,
       workingHours:
         page.contacts?.workingHours.map((wh) => ({
@@ -946,6 +1050,11 @@ export class AdminPagesService {
 
   async updateContactsPage(input: ContactsPageBody) {
     const page = await this.ensureStaticPage(StaticPageType.CONTACTS);
+    const addressText =
+      input.addressText !== undefined
+        ? sanitizeRichText(input.addressText)
+        : undefined;
+
     await this.app.prisma.$transaction(async (tx) => {
       const contacts = await tx.contactsPage.upsert({
         where: { id: page.id },
@@ -965,8 +1074,8 @@ export class AdminPagesService {
           ...(input.maxMessengerUrl !== undefined && {
             maxMessengerUrl: input.maxMessengerUrl,
           }),
-          ...(input.addressText !== undefined && {
-            addressText: input.addressText ?? '',
+          ...(addressText !== undefined && {
+            addressText,
           }),
           ...(input.yandexMapUrl !== undefined && {
             yandexMapUrl: input.yandexMapUrl ?? '',
@@ -979,7 +1088,7 @@ export class AdminPagesService {
           telegramUrl: input.telegramUrl ?? null,
           whatsappUrl: input.whatsappUrl ?? null,
           maxMessengerUrl: input.maxMessengerUrl ?? null,
-          addressText: input.addressText ?? '',
+          addressText: addressText ?? '',
           yandexMapUrl: input.yandexMapUrl ?? '',
         },
       });
@@ -1043,6 +1152,43 @@ export class AdminPagesService {
           await tx.contactsMetroStation.createMany({ data: metroPayload });
         }
       }
+    });
+
+    await this.upsertSeo(page.id, input.seo);
+  }
+
+  /* ===================== SERVICES ===================== */
+
+  async getServicesPage() {
+    const page = await this.app.prisma.staticPage.findUnique({
+      where: { type: StaticPageType.SERVICES },
+      include: {
+        services: true,
+        seo: true,
+      },
+    });
+
+    if (!page) {
+      throw this.app.httpErrors.notFound('Страница SERVICES не найдена');
+    }
+
+    return {
+      ...this.mapServicesPageCopy(page.services),
+      seo: this.mapSeoResponse(page.seo),
+    } as ServicesPageBody;
+  }
+
+  async updateServicesPage(input: ServicesPageBody) {
+    const page = await this.ensureStaticPage(StaticPageType.SERVICES);
+    const updateData = this.buildServicesPageUpdateData(input);
+
+    await this.app.prisma.servicesPage.upsert({
+      where: { id: page.id },
+      update: updateData,
+      create: {
+        id: page.id,
+        ...this.buildServicesPageCreateData(input),
+      },
     });
 
     await this.upsertSeo(page.id, input.seo);

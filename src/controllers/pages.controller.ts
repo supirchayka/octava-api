@@ -35,6 +35,16 @@ export class PagesController {
     return reply.send(data);
   };
 
+  services = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const data = await this.service.getServicesPage();
+    if (!data) {
+      return reply
+        .code(404)
+        .send({ message: "Страница «Услуги» не настроена" });
+    }
+    return reply.send(data);
+  };
+
   prices = async (_req: FastifyRequest, reply: FastifyReply) => {
     const data = await this.service.getPrices();
     if (!data) {
