@@ -18,4 +18,14 @@ export class OrgController {
     }
     return reply.send(card);
   };
+
+  getOrgSummary = async (_req: FastifyRequest, reply: FastifyReply) => {
+    const card = await this.service.getOrgSummary();
+    if (!card) {
+      return reply.code(404).send({
+        message: "Организация не настроена",
+      });
+    }
+    return reply.send(card);
+  };
 }

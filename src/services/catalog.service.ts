@@ -150,11 +150,10 @@ export class CatalogService {
       ],
       include: {
         images: {
+          where: { purpose: ImagePurpose.HERO },
           include: { file: true },
           orderBy: { order: "asc" },
-        },
-        seo: {
-          include: { ogImage: true },
+          take: 1,
         },
         _count: {
           select: { services: true },
@@ -174,11 +173,10 @@ export class CatalogService {
       ],
       include: {
         images: {
+          where: { purpose: ImagePurpose.HERO },
           include: { file: true },
           orderBy: { order: "asc" },
-        },
-        seo: {
-          include: { ogImage: true },
+          take: 1,
         },
         _count: {
           select: { services: true },
@@ -397,15 +395,6 @@ export class CatalogService {
           specialist: {
             include: {
               photo: true,
-              services: {
-                orderBy: [
-                  { sortOrder: "asc" },
-                  { service: { sortOrder: "asc" } },
-                  { service: { name: "asc" } },
-                  { serviceId: "asc" },
-                ],
-                include: { service: true },
-              },
             },
           },
         },
@@ -438,15 +427,7 @@ export class CatalogService {
     const specialists = specialistLinks.map((link) => ({
       ...this.mapSpecialist(link.specialist),
       serviceComment: link.comment ?? null,
-      services: link.specialist.services.map((serviceLink: any) => ({
-        id: serviceLink.service.id,
-        slug: serviceLink.service.slug,
-        name: serviceLink.service.name,
-        serviceCode: serviceLink.service.serviceCode ?? DEFAULT_SERVICE_CODE,
-        shortOffer: serviceLink.service.shortOffer,
-        priceFrom: serviceLink.service.priceFrom?.toString() ?? null,
-        sortOrder: serviceLink.sortOrder,
-      })),
+      services: [],
     }));
 
     return {

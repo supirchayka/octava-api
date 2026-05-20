@@ -736,6 +736,26 @@ export class AdminCatalogService {
   }
 
   async deleteCategory(id: number) {
+    const category = await this.app.prisma.serviceCategory.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        _count: {
+          select: { services: true },
+        },
+      },
+    });
+
+    if (!category) {
+      throw this.app.httpErrors.notFound('Категория не найдена');
+    }
+
+    if (category._count.services > 0) {
+      throw this.app.httpErrors.badRequest(
+        'Нельзя удалить категорию, пока в ней есть услуги. Сначала перенесите или удалите услуги.',
+      );
+    }
+
     await this.app.prisma.serviceCategory.delete({ where: { id } });
   }
 

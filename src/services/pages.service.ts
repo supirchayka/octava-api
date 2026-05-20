@@ -418,15 +418,8 @@ export class PagesService {
   // ===== PRICES (/pages/prices) =====
 
   async getPrices() {
-    const page = await this.app.prisma.staticPage.upsert({
+    const page = await this.app.prisma.staticPage.findUnique({
       where: { type: StaticPageType.PRICES },
-      update: {
-        slug: "prices",
-      },
-      create: {
-        type: StaticPageType.PRICES,
-        slug: "prices",
-      },
       include: {
         prices: {
           include: {
@@ -440,6 +433,8 @@ export class PagesService {
         },
       },
     });
+
+    if (!page) return null;
 
     return {
       page: {

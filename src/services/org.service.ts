@@ -76,4 +76,44 @@ export class OrgService {
       })),
     };
   }
+
+  async getOrgSummary() {
+    const org = await this.app.prisma.organization.findFirst({
+      select: {
+        id: true,
+        fullName: true,
+        address: true,
+        email: true,
+        phones: {
+          select: {
+            type: true,
+            number: true,
+            isPrimary: true,
+          },
+          orderBy: {
+            id: 'asc',
+          },
+        },
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+
+    if (!org) {
+      return null;
+    }
+
+    return {
+      id: org.id,
+      fullName: org.fullName,
+      address: org.address,
+      email: org.email,
+      phones: org.phones.map((p) => ({
+        type: p.type,
+        number: p.number,
+        isPrimary: p.isPrimary,
+      })),
+    };
+  }
 }
