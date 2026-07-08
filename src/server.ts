@@ -18,6 +18,7 @@ import adminOrgRoutes from './routes/admin-org.routes';
 import adminPagesRoutes from './routes/admin-pages.routes';
 import fastifyMultipart from '@fastify/multipart';
 import adminFilesRoutes from './routes/admin-files.routes';
+import { MAX_UPLOAD_SIZE_BYTES } from './utils/upload-limits';
 
 const start = async () => {
   const app = Fastify({
@@ -33,7 +34,7 @@ const start = async () => {
 
 await app.register(fastifyMultipart, {
   limits: {
-    fileSize: 25 * 1024 * 1024, // 25 MB
+    fileSize: MAX_UPLOAD_SIZE_BYTES,
     files: 1,
   },
 });

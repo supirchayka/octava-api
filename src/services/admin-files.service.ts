@@ -5,6 +5,10 @@ import { promises as fs } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Storage, FileKind } from '@prisma/client';
+import {
+  MAX_UPLOAD_SIZE_BYTES,
+  MAX_UPLOAD_SIZE_MB,
+} from '../utils/upload-limits';
 
 type BinaryFileMeta = {
   filenameHeader?: string;
@@ -13,7 +17,7 @@ type BinaryFileMeta = {
 
 export class AdminFilesService {
   private readonly uploadDir: string;
-  private readonly maxSize = 25 * 1024 * 1024; // 25 MB
+  private readonly maxSize = MAX_UPLOAD_SIZE_BYTES;
 
   constructor(private app: FastifyInstance) {
     this.uploadDir = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
@@ -111,7 +115,9 @@ export class AdminFilesService {
 
   private enforceSize(buffer: Buffer) {
     if (buffer.length > this.maxSize) {
-      throw this.app.httpErrors.badRequest('File size exceeds 25 MB');
+      throw this.app.httpErrors.badRequest(
+        `File size exceeds ${MAX_UPLOAD_SIZE_MB} MB`,
+      );
     }
   }
 
